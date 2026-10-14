@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="VLC Player: a fast, private media player that runs in your browser.">
+<meta name="theme-color" content="#1e1e1e">
+<title>VLC Player</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{
+  --win:#ececed;--rail:#e3e3e5;--panel:#f6f6f7;--stage:#d6d6d8;--card:#ffffff;--field:#ffffff;
+  --line:#d4d4d8;--text:#1c1c1e;--muted:#5f5f66;--dim:#8d8d94;--hover:rgba(0,0,0,.06);
+  --menu:#ffffff;--setbg:#f4f4f5;--sethead:#e5e5e8;--setnav:#ffffff;--navon:#ececef;--knob:#c3c3c8;--vol:#6f8a10;
+  --accent:#e0801a;--accent-ink:#141414;--focus:#2b78d6;
+  --accent-dim:color-mix(in srgb,var(--accent) 22%,var(--field));
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --win:#1e1e1e;--rail:#1a1a1a;--panel:#101010;--stage:#2b2b2a;--card:#1b1b1b;--field:#0b0b0b;
+    --line:#2a2a2a;--text:#ececec;--muted:#9a9a9a;--dim:#6b6b6b;--hover:rgba(255,255,255,.07);
+    --menu:#222222;--setbg:#1b1b1b;--sethead:#0a0a0a;--setnav:#151515;--navon:#262626;--knob:#3c3c3c;--vol:#86a517;
+    --focus:#6ab0ff;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --win:#1e1e1e;--rail:#1a1a1a;--panel:#101010;--stage:#2b2b2a;--card:#1b1b1b;--field:#0b0b0b;
+  --line:#2a2a2a;--text:#ececec;--muted:#9a9a9a;--dim:#6b6b6b;--hover:rgba(255,255,255,.07);
+  --menu:#222222;--setbg:#1b1b1b;--sethead:#0a0a0a;--setnav:#151515;--navon:#262626;--knob:#3c3c3c;--vol:#86a517;
+  --focus:#6ab0ff;color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;height:100%;background:var(--win);color:var(--text);overflow:hidden;
+  font:400 15px/1.4 Inter,"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
+input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+svg.i{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- window frame ---------- */
+.win{height:100%;position:relative;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--win)}
+.tb{grid-row:1;height:40px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 6px;background:var(--win);user-select:none;-webkit-user-select:none;transition:opacity .2s}
+.tl{display:flex;align-items:center;gap:2px;min-width:0}
+.tr{display:flex;justify-content:flex-end}
+.ttl{color:var(--muted);font-size:14px;white-space:nowrap}
+.ttl.rec{color:var(--accent)}
+.wb{width:36px;height:34px;display:grid;place-items:center;border-radius:8px;color:var(--text)}
+.wb:hover{background:var(--hover)}
+.wb svg.i{width:19px;height:19px}
+.wb.logo svg.i{width:24px;height:24px;stroke:none}
+.vsep{width:1px;height:20px;background:var(--line);margin:0 8px}
+.crumb{display:flex;align-items:center;gap:8px;padding:0 4px;white-space:nowrap}
+.crumb svg.i{width:22px;height:22px}
+
+.body{grid-row:2;display:flex;min-height:0;min-width:0;background:var(--win)}
+.win.v-lib .body{background:var(--panel)}
+.content{flex:1;min-width:0;min-height:0;position:relative}
+
+.sbcard{display:none;flex:none;width:200px;margin:8px 0 8px 8px;padding:8px;background:var(--card);border-radius:14px;flex-direction:column;gap:2px}
+.win.v-lib .sbcard{display:flex}
+.sbi{display:flex;align-items:center;gap:14px;height:46px;padding:0 12px;border-radius:10px;color:var(--muted);font-size:15px;width:100%}
+.sbi:hover{background:var(--hover);color:var(--text)}
+.sbi.on{color:var(--text)}
+.rail{display:none;flex:none;width:50px;background:var(--rail);flex-direction:column;align-items:center;padding-top:8px;gap:6px}
+.win.v-play.panel-open .rail{display:flex}
+.rl{width:40px;height:40px;display:grid;place-items:center;border-radius:10px;color:var(--muted)}
+.rl:hover{background:var(--hover);color:var(--text)}
+.rl.on{color:var(--accent)}
+.panel{display:none;flex:none;width:376px;background:var(--panel);flex-direction:column;min-height:0}
+.win.v-play.panel-open .panel{display:flex}
+.queue{display:none;flex:none;width:340px;background:var(--panel);flex-direction:column;min-height:0}
+.win.queue-open .queue{display:flex}
+
+.ib{width:36px;height:36px;display:grid;place-items:center;border-radius:8px;color:var(--text);flex:none}
+.ib svg.i{width:20px;height:20px}
+.ib:hover{background:var(--hover)}
+.ib.dim{color:var(--dim)}
+.ib[disabled]{opacity:.35;pointer-events:none}
+.btn{height:40px;padding:0 18px;border-radius:9px;background:var(--card);border:1px solid var(--line);color:var(--text);display:inline-flex;align-items:center;gap:8px;justify-content:center}
+.btn:hover{border-color:var(--dim)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.sm{height:34px;padding:0 14px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.sp{flex:1}
+.cnt{color:var(--muted);font-size:14px;white-space:nowrap}
+.srch{display:flex;align-items:center;gap:8px;height:42px;padding:0 12px;border-radius:10px;background:var(--card);color:var(--muted);width:min(420px,30vw)}
+.srch input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--text);font-size:15px}
+.srch input::placeholder{color:var(--dim)}
+.srch svg.i{width:20px;height:20px}
+.fld{width:100%;height:44px;border-radius:10px;border:2px solid var(--line);background:var(--field);padding:0 12px;color:var(--text);outline:0}
+.fld:focus{border-color:var(--accent)}
+
+/* ---------- library ---------- */
+.lib{display:none;height:100%;flex-direction:column;min-height:0}
+.win.v-lib .lib{display:flex}
+.ltool{display:flex;align-items:center;gap:6px;height:62px;margin:0 22px;border-bottom:1px solid var(--line);flex:none}
+.bc{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;margin-left:6px;font-size:17px;white-space:nowrap}
+.bc button{color:var(--text)}
+.bc button:hover{text-decoration:underline}
+.bc b{font-weight:600}
+.tri{width:0;height:0;border-left:5px solid var(--muted);border-top:3.5px solid transparent;border-bottom:3.5px solid transparent;flex:none}
+.llist{flex:1;overflow:auto;padding:22px 22px 30px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:24px 20px}
+.tile{display:block;width:100%;border-radius:12px;text-align:left}
+.th{position:relative;aspect-ratio:16/9;border-radius:12px;background:#000;overflow:hidden;display:grid;place-items:center;color:#6b6b6b}
+.th img{width:100%;height:100%;object-fit:cover;display:block}
+.th .ph svg.i{width:34px;height:34px;stroke-width:1.4}
+.pg{position:absolute;left:0;bottom:0;height:3px;background:var(--accent);border-radius:0 2px 2px 0}
+.nm{margin-top:12px;font-size:15px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile.seen .nm{color:var(--dim)}
+.tile.seen .th img{opacity:.8}
+.tile:hover .th,.tile:focus-visible .th{box-shadow:0 0 0 2px var(--accent)}
+.gh{margin:0 0 14px;font-size:17px;font-weight:600}
+.gh:not(:first-child){margin-top:30px}
+.lrow{display:flex;align-items:center;gap:14px;width:100%;min-height:50px;padding:6px 10px;border-radius:10px;color:var(--text)}
+.lrow:hover,.lrow:focus-visible{background:var(--hover)}
+.lrow .mini{width:58px;aspect-ratio:16/9;border-radius:6px;background:#000;overflow:hidden;display:grid;place-items:center;color:#6b6b6b;flex:none}
+.lrow .mini img{width:100%;height:100%;object-fit:cover}
+.lrow .mini svg.i{width:18px;height:18px}
+.lrow span.n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow.seen span.n{color:var(--dim)}
+.lrow.cur{background:var(--hover);box-shadow:inset 3px 0 0 var(--accent)}
+.prow{display:flex;align-items:center;gap:18px;width:100%;height:52px;padding:0 14px;border-radius:10px;color:var(--text)}
+.prow:hover{background:var(--hover)}
+.prow.dim{color:var(--dim)}
+.prow svg.i{color:var(--muted)}
+.empty{display:grid;justify-items:center;gap:14px;text-align:center;padding:60px 20px;color:var(--muted)}
+.empty h3{margin:0;color:var(--text);font-size:19px;font-weight:600}
+.empty p{margin:0;max-width:46ch}
+.empty .row2{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.netcard{background:var(--card);border-radius:14px;padding:18px;margin-bottom:22px;max-width:640px}
+.netcard h3{margin:0 0 4px;font-size:17px;font-weight:600}
+.netcard p{margin:0 0 12px;color:var(--muted)}
+.netrow{display:flex;gap:8px}
+
+/* panel (compact library) */
+.phead{display:flex;align-items:center;gap:2px;padding:12px 14px 0 16px}
+.phead .t{flex:1;font-size:17px;margin-left:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pmeta{display:flex;align-items:center;gap:2px;padding:6px 14px 0 22px;color:var(--muted);font-size:14px}
+.pmeta .cnt{flex:1}
+.pser{margin:6px 22px 0;width:auto}
+.pdiv{height:1px;background:var(--line);margin:10px 22px 8px}
+.plist{flex:1;overflow:auto;padding:4px 16px 16px}
+.qhead{display:flex;align-items:center;gap:4px;padding:14px 14px 8px 22px;font-size:17px}
+.qhead b{flex:1;font-weight:600}
+
+/* ---------- stage ---------- */
+.stage{display:none;position:absolute;inset:0 8px 0 8px;background:var(--stage);border-radius:12px 12px 0 0;overflow:hidden;color:var(--text);user-select:none;-webkit-user-select:none}
+.win.v-play .stage{display:block}
+.win.v-play.panel-open .stage{left:0;border-top-left-radius:0}
+.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:transparent}
+.stage.is-audio video{visibility:hidden}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:none}
+.stage.is-audio canvas{display:block}
+.stage video::cue{font-size:var(--cue,1.15em)}
+.cover{position:absolute;left:0;right:0;top:12%;text-align:center;padding:0 24px;display:none;pointer-events:none;font-size:20px;font-weight:600}
+.stage.is-audio .cover{display:block}
+.err{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;text-align:center;padding:24px;background:var(--stage)}
+.err h2{margin:0;font-size:21px;font-weight:600}
+.err p{margin:0;max-width:48ch;color:var(--muted)}
+.err .row2{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.stats{position:absolute;left:14px;top:14px;background:rgba(0,0,0,.7);padding:8px 12px;border-radius:8px;font:12px/1.55 ui-monospace,Consolas,monospace;color:#dcdcdc;white-space:pre;pointer-events:none}
+.osd{position:fixed;top:54px;left:50%;transform:translateX(-50%);z-index:900;background:rgba(20,20,20,.9);color:#fff;padding:7px 16px;border-radius:999px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .15s;max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.osd.show{opacity:1}
+.win.dragging::after{content:"Drop to play";position:absolute;inset:10px;border:2px dashed var(--accent);border-radius:16px;display:grid;place-items:center;font-size:22px;font-weight:600;background:rgba(0,0,0,.55);color:#fff;z-index:800}
+
+/* ---------- control bar ---------- */
+.bar{grid-row:3;display:flex;align-items:center;gap:4px;height:54px;padding:0 14px 0 18px;background:var(--win);transition:opacity .2s}
+.win:not(.has-media) .bar{display:none}
+.bi{width:36px;height:36px;display:grid;place-items:center;border-radius:8px;color:var(--text);flex:none}
+.bi svg.i{width:20px;height:20px}
+.bi:hover{background:var(--hover)}
+.bi[aria-pressed="true"]{color:var(--accent)}
+.pb{width:56px;height:30px;border-radius:7px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;margin:0 6px;flex:none}
+.pb svg.i{width:17px;height:17px}
+.pb:hover{filter:brightness(1.08)}
+.tm{color:var(--muted);font-size:15px;font-variant-numeric:tabular-nums;margin:0 10px;white-space:nowrap}
+.seekb{position:relative;flex:1;min-width:60px;height:28px;border-radius:7px;background:var(--field);border:1px solid var(--line);cursor:pointer;touch-action:none}
+.sfl{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--accent-dim);border-radius:6px 0 0 6px}
+.sth{position:absolute;left:0;top:-1px;bottom:-1px;width:8px;margin-left:-4px;background:var(--accent);border-radius:4px}
+.mk{position:absolute;top:4px;bottom:4px;width:2px;background:var(--text);opacity:.8;display:none}
+.tip{position:absolute;bottom:36px;transform:translateX(-50%);background:var(--menu);color:var(--text);padding:3px 9px;border-radius:7px;font-size:12px;box-shadow:0 0 0 1px var(--line);display:none;pointer-events:none;font-variant-numeric:tabular-nums}
+.seekb:hover .tip,.seekb.drag .tip{display:block}
+.volw{position:relative;width:88px;height:28px;margin:0 8px 0 0;flex:none}
+.volsh{position:absolute;inset:4px 0;background:var(--field);clip-path:polygon(0 72%,100% 0,100% 100%,0 100%)}
+.volf{position:absolute;left:0;top:0;bottom:0;width:100%;background:var(--vol)}
+.volw input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+
+/* ---------- fullscreen / hidden UI ---------- */
+.win.fs.v-play .tb{position:absolute;top:0;left:0;right:0;z-index:20}
+.win.fs.v-play .bar{position:absolute;left:0;right:0;bottom:0;z-index:20}
+.win.fs.v-play .rail,.win.fs.v-play .panel,.win.fs.v-play .queue{display:none!important}
+.win.fs.v-play .stage{inset:0;border-radius:0}
+.win.fs.v-play.idle .tb,.win.fs.v-play.idle .bar{opacity:0;pointer-events:none}
+.win.fs.v-play.idle{cursor:none}
+.win.noui .tb,.win.noui .bar,.win.noui .rail,.win.noui .panel,.win.noui .queue{display:none!important}
+.win.noui .stage{inset:0;border-radius:0}
+
+/* ---------- menus ---------- */
+.menu,.sub{background:var(--menu);border-radius:14px;box-shadow:0 14px 44px rgba(0,0,0,.5),0 0 0 1px var(--line)}
+.menu{position:fixed;z-index:1000;min-width:276px;padding:6px 0}
+.mi{position:relative;display:flex;align-items:center;gap:14px;height:clamp(32px,5.2vh,44px);padding:0 16px 0 14px;color:var(--muted);font-size:15px;cursor:pointer;white-space:nowrap}
+.mi:hover,.mi.open,.mi:focus-visible{background:var(--hover);color:var(--text);outline:none}
+.menu:focus{outline:none}
+.mi .ic{width:22px;display:grid;place-items:center;flex:none}
+.mi .lb{flex:1}
+.mi .kb{color:var(--dim);display:flex}
+.mi .kb svg.i{width:18px;height:18px}
+.mi.dis{opacity:.4;pointer-events:none}
+.msep{height:1px;background:var(--line);margin:6px 0}
+.sub{display:none;position:absolute;left:100%;top:-6px;margin-left:4px;min-width:250px;padding:6px 0;z-index:2}
+.sub.flip{left:auto;right:100%;margin:0 4px 0 0}
+.mi.open>.sub{display:block}
+
+/* ---------- dialogs ---------- */
+dialog{border:0;padding:0;background:var(--setbg);color:var(--text);border-radius:22px;max-width:94vw;max-height:94vh}
+dialog::backdrop{background:rgba(0,0,0,.62)}
+.dlg{width:min(480px,92vw);padding:22px}
+.dlg h2{margin:0 0 14px;font-size:18px;font-weight:600}
+.dlg p{margin:0 0 12px;color:var(--muted)}
+.dlg .row2{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.dlg img,.dlg video{max-width:100%;border-radius:10px;display:block;background:#000}
+.addgrid{display:grid;gap:8px}
+.addgrid .btn{height:52px;justify-content:flex-start;padding:0 16px;font-size:15px}
+
+.set{width:min(1040px,94vw);height:min(840px,90vh)}
+.set[open]{display:flex;flex-direction:column}
+.sethead{display:grid;grid-template-columns:232px 1fr auto;align-items:center;height:58px;background:var(--sethead);padding:0 12px 0 10px;flex:none}
+.sethead .srch{width:auto;height:40px;background:var(--setnav)}
+.sethead h2{margin:0 0 0 22px;font-size:18px;font-weight:500}
+.setbody{flex:1;display:grid;grid-template-columns:232px minmax(0,1fr);min-height:0}
+.setnav{margin:10px;padding:8px;background:var(--setnav);border-radius:14px;overflow:auto}
+.ng{padding:14px 12px 6px;color:var(--dim);font-size:15px}
+.ng:first-child{padding-top:6px}
+.ni{display:flex;align-items:center;gap:14px;width:100%;height:42px;padding:0 12px;border-radius:9px;color:var(--muted)}
+.ni:hover{background:var(--hover)}
+.ni.on{background:var(--navon);color:var(--text)}
+.ni.on svg.i{color:var(--accent)}
+.setpage{overflow:auto;padding:22px 28px 28px;background:var(--setbg)}
+.sh{margin:28px 0 8px;font-size:19px;font-weight:600}
+.sh:first-child{margin-top:0}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px}
+.row .lab{color:var(--muted);font-size:16px;display:flex;align-items:center;gap:10px}
+.hlp{color:var(--dim);display:inline-grid;cursor:help}
+.hlp svg.i{width:18px;height:18px}
+.tgl{width:66px;height:36px;display:flex;align-items:center;gap:4px;padding:3px;border-radius:9px;background:var(--field);border:1px solid var(--line);color:var(--dim);font-size:14px;flex:none}
+.tgl .kn{width:28px;height:28px;border-radius:6px;background:var(--knob);flex:none}
+.tgl span{flex:1;text-align:center}
+.tgl[aria-checked="true"]{flex-direction:row-reverse;background:var(--accent-dim);color:var(--accent)}
+.tgl[aria-checked="true"] .kn{background:var(--accent)}
+.tgl:disabled{opacity:.5;cursor:not-allowed}
+.sel{width:min(300px,52%);height:46px;appearance:none;-webkit-appearance:none;border-radius:9px;border:2px solid var(--line);padding:0 40px 0 16px;color:var(--text);font-size:16px;
+  background:var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;cursor:pointer}
+.sel:disabled{opacity:.5;cursor:not-allowed}
+.seg{display:flex;gap:4px;padding:4px;background:var(--field);border-radius:11px;width:min(620px,62%)}
+.seg button{flex:1;height:40px;border-radius:8px;color:var(--muted);font-size:16px;text-align:center}
+.seg button[aria-checked="true"]{background:var(--accent-dim);color:var(--accent)}
+.sw{display:flex;gap:4px;padding:6px;background:var(--field);border-radius:11px}
+.sw button{width:42px;height:42px;display:grid;place-items:center;border-radius:8px}
+.sw button i{width:30px;height:30px;border-radius:5px;display:block}
+.sw button[aria-checked="true"]{background:var(--navon)}
+.rng{display:flex;align-items:center;gap:12px;width:min(300px,52%)}
+.rng input{flex:1;accent-color:var(--accent)}
+.rng output{width:54px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.adv{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:56px;margin-top:26px;border-radius:10px;background:var(--setnav);color:var(--muted);font-size:16px}
+.adv:disabled{opacity:.55;cursor:not-allowed}
+.note{margin:6px 0;color:var(--muted);line-height:1.55}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 22px;margin:8px 0 0;color:var(--muted)}
+.keys dt{white-space:nowrap}
+.keys dd{margin:0}
+kbd{border:1px solid var(--line);background:var(--field);border-radius:6px;padding:1px 7px;font:12px ui-monospace,Consolas,monospace;color:var(--text)}
+.eqopen{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:50px;margin:8px 0;color:var(--muted);font-size:16px}
+.eq{display:flex;justify-content:space-between;gap:4px;padding:10px 0 16px}
+.eqc{display:flex;flex-direction:column;align-items:center;gap:12px;flex:1;min-width:0}
+.vs{position:relative;width:46px;height:300px;cursor:pointer;touch-action:none}
+.vs .trk{position:absolute;left:50%;transform:translateX(-50%);width:32px;top:0;bottom:0;border-radius:16px;background:var(--field)}
+.vs .fl{position:absolute;left:50%;transform:translateX(-50%);width:32px;bottom:0;border-radius:0 0 16px 16px;background:var(--accent-dim)}
+.vs .hd{position:absolute;left:0;right:0;height:16px;margin-bottom:-8px;border-radius:5px;background:var(--accent)}
+.hz{color:var(--muted);font-size:14px;white-space:nowrap}
+.db{min-width:0;width:100%;max-width:64px;padding:8px 0;border-radius:8px;background:var(--field);text-align:center;font-size:13px;color:var(--text);font-variant-numeric:tabular-nums}
+
+/* ---------- responsive ---------- */
+@media (max-width:860px){
+  .win.v-lib .body{flex-direction:column}
+  .sbcard{width:auto;margin:6px;flex-direction:row;overflow-x:auto;align-self:stretch}
+  .sbi{width:auto;white-space:nowrap;height:40px;flex:none}
+  .rail{position:absolute;z-index:31;top:0;bottom:0;left:0}
+  .panel{position:absolute;z-index:30;left:50px;top:0;bottom:0;width:min(86vw,376px);box-shadow:0 0 30px rgba(0,0,0,.5)}
+  .win.v-play.panel-open .stage{left:8px;border-top-left-radius:12px}
+  .queue{position:absolute;z-index:30;right:0;top:40px;bottom:54px;width:min(86vw,340px);box-shadow:0 0 30px rgba(0,0,0,.5)}
+  .volw,#bAud,#bSub{display:none}
+  .srch{width:38vw}
+  .ttl{display:none}
+  .tm{margin:0 4px;font-size:13px}
+  .ltool{margin:0 12px}
+  .llist{padding:16px 12px 24px}
+  .bar{padding:0 8px}
+}
+@media (max-width:720px){
+  .sethead{grid-template-columns:1fr auto}
+  .sethead h2{display:none}
+  .setbody{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .setnav{margin:8px;display:flex;overflow-x:auto;gap:4px;padding:6px}
+  .ng{display:none}
+  .ni{width:auto;white-space:nowrap;flex:none}
+  .setpage{padding:16px}
+  .sel,.rng{width:55%}
+  .seg{width:100%}
+  .vs{height:220px;width:30px}
+  .vs .trk,.vs .fl{width:22px}
+  .hz{font-size:10px}
+  .db{font-size:10px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-cone" viewBox="0 0 24 24"><path d="M12 2.2 17.6 17H6.4z" fill="#e8851a" stroke="none"/><path d="M10.2 7.4h3.6l.9 2.4H9.3zM8.4 12.2h7.2l.9 2.4H7.5z" fill="#fff" stroke="none"/><path d="M3.5 21.8a1 1 0 0 1-.7-1.7L5 17.6h14l2.2 2.5a1 1 0 0 1-.7 1.7z" fill="#e8851a" stroke="none"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8.2a.8.8 0 0 1-.8.8H15v-6H9v6H4.8a.8.8 0 0 1-.8-.8z"/></symbol>
+  <symbol id="i-home-f" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8.2a.8.8 0 0 1-.8.8H15v-6H9v6H4.8a.8.8 0 0 1-.8-.8z" fill="currentColor"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="M10 8.7v6.6l5.2-3.3z"/></symbol>
+  <symbol id="i-video-f" viewBox="0 0 24 24"><path fill-rule="evenodd" fill="currentColor" stroke="none" d="M6.5 3h11A3.5 3.5 0 0 1 21 6.5v11a3.5 3.5 0 0 1-3.5 3.5h-11A3.5 3.5 0 0 1 3 17.5v-11A3.5 3.5 0 0 1 6.5 3zM10 8.5v7l5.6-3.5z"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="M11 16V9l4.5-1.2v6"/><circle cx="9.5" cy="16.2" r="1.5"/><circle cx="14" cy="14" r="1.5"/></symbol>
+  <symbol id="i-music-f" viewBox="0 0 24 24"><path fill-rule="evenodd" fill="currentColor" stroke="none" d="M6.5 3h11A3.5 3.5 0 0 1 21 6.5v11a3.5 3.5 0 0 1-3.5 3.5h-11A3.5 3.5 0 0 1 3 17.5v-11A3.5 3.5 0 0 1 6.5 3zM11 8.2v6.3a2 2 0 1 0 1.2 1.8V10.4l2.6-.7v3a2 2 0 1 0 1.2 1.8V7z"/></symbol>
+  <symbol id="i-network" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><path d="M8.6 8.6a4.8 4.8 0 0 0 0 6.8M15.4 8.6a4.8 4.8 0 0 1 0 6.8M5.8 5.8a8.8 8.8 0 0 0 0 12.4M18.2 5.8a8.8 8.8 0 0 1 0 12.4"/></symbol>
+  <symbol id="i-playlists" viewBox="0 0 24 24"><path d="M4 7h12M4 12h8M4 17h8"/><path d="M15 12.5v7l5.5-3.5z" fill="currentColor" stroke-width="1.2"/></symbol>
+  <symbol id="i-recent" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 4v4.5H8"/><path d="M12 8v4.2l2.8 1.8"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="i-fwd" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.4" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><rect x="5.5" y="6.5" width="4" height="11" rx="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.3a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-min" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+  <symbol id="i-max" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></symbol>
+  <symbol id="i-fs" viewBox="0 0 24 24"><path d="M4.5 9V4.5H9M19.5 9V4.5H15M4.5 15v4.5H9M19.5 15v4.5H15"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 24 24"><path d="M8 5v14M4.5 15.5 8 19l3.5-3.5M16 19V5M12.5 8.5 16 5l3.5 3.5"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="4.5" height="4.5" rx="1"/><path d="M11.5 6.8H21"/><rect x="3.5" y="15" width="4.5" height="4.5" rx="1"/><path d="M11.5 17.3H21"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20.5 20.5"/></symbol>
+  <symbol id="i-opennew" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 14.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.5"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M7 6.5v11"/><path d="M18 6.5v11l-8.5-5.5z" fill="currentColor"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M17 6.5v11"/><path d="M6 6.5v11l8.5-5.5z" fill="currentColor"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-vol" viewBox="0 0 24 24"><path d="M4 9.8v4.4h3.4L12.5 18V6L7.4 9.8z"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7.5a6.5 6.5 0 0 1 0 9"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.8v4.4h3.4L12.5 18V6L7.4 9.8z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></symbol>
+  <symbol id="i-audio" viewBox="0 0 24 24"><path d="M3.5 10.5v3M7.7 7.5v9M12 4v16M16.3 7.5v9M20.5 10.5v3"/></symbol>
+  <symbol id="i-sub" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 11.5h3.5M13 11.5h4M7 15h5.5M15 15h2"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-queue" viewBox="0 0 24 24"><path d="M9.5 6H21M9.5 12H21M9.5 18H21"/><circle cx="4.8" cy="6" r="1" fill="currentColor"/><circle cx="4.8" cy="12" r="1" fill="currentColor"/><circle cx="4.8" cy="18" r="1" fill="currentColor"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".6" fill="currentColor"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+  <symbol id="i-chevd" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <!-- two-tone menu icons -->
+  <symbol id="i-m-play" viewBox="0 0 24 24"><path d="M8.5 5.5v13l10-6.5z" style="stroke:var(--accent)"/></symbol>
+  <symbol id="i-m-stop" viewBox="0 0 24 24"><rect x="7" y="6.5" width="10" height="11" rx="1.5" style="stroke:var(--accent)"/></symbol>
+  <symbol id="i-m-prev" viewBox="0 0 24 24"><path d="M6 6v12" style="stroke:var(--accent)"/><path d="M18 6.5v11l-8-5.5z" style="stroke:var(--accent)"/></symbol>
+  <symbol id="i-m-next" viewBox="0 0 24 24"><path d="M18 6v12" style="stroke:var(--accent)"/><path d="M6 6.5v11l8-5.5z" style="stroke:var(--accent)"/></symbol>
+  <symbol id="i-m-rec" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" style="stroke:var(--accent)"/><circle cx="12" cy="12" r="3.2" style="fill:var(--accent);stroke:none"/></symbol>
+  <symbol id="i-m-hide" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M8.5 8.5l7 7" style="stroke:var(--accent)"/></symbol>
+  <symbol id="i-m-playback" viewBox="0 0 24 24"><path d="M5.5 7a2.5 2.5 0 0 1 3.8-2.1l9 5.2a2.5 2.5 0 0 1 0 4.3l-9 5.2a2.5 2.5 0 0 1-3.8-2.1z"/><path d="M10 9.5v5l4.2-2.5z" style="stroke:var(--accent)"/></symbol>
+  <symbol id="i-m-clap" viewBox="0 0 24 24"><rect x="3.5" y="8" width="17" height="12" rx="2.5"/><path d="M3.5 8.5V6.5A1.5 1.5 0 0 1 5 5h14a1.5 1.5 0 0 1 1.5 1.5v2" style="stroke:var(--accent);stroke-width:2.6"/></symbol>
+  <symbol id="i-m-audio" viewBox="0 0 24 24"><path d="M3.5 10.5v3M7.7 7.5v9M12 4v16M16.3 7.5v9M20.5 10.5v3" style="stroke:var(--accent)"/></symbol>
+  <symbol id="i-m-sub" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 11.5h3.5M13 11.5h4M7 15h5.5M15 15h2" style="stroke:var(--accent)"/></symbol>
+  <symbol id="i-m-gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="2.6" style="stroke:var(--accent)"/></symbol>
+  <symbol id="i-m-pl" viewBox="0 0 24 24"><path d="M4 7h13M4 12h8M4 17h8"/><path d="M15 12.5v7l5.5-3.5z" style="fill:var(--accent);stroke:var(--accent);stroke-width:1.2"/></symbol>
+  <symbol id="i-m-open" viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="3.5"/><path d="M4 9V7a3.5 3.5 0 0 1 3.5-3.5H10V9z" style="fill:var(--accent);stroke:none"/></symbol>
+  <symbol id="i-m-quit" viewBox="0 0 24 24"><path d="M10.5 4H7a2.5 2.5 0 0 0-2.5 2.5v11A2.5 2.5 0 0 0 7 20h3.5"/><path d="M14.5 8l4 4-4 4M18.5 12H9" style="stroke:var(--accent)"/></symbol>
+  <!-- settings nav icons -->
+  <symbol id="i-s-general" viewBox="0 0 24 24"><path d="M6 4v16M12 4v16M18 4v16"/><path d="M3.8 9h4.4M9.8 15h4.4M15.8 8h4.4" stroke-width="2.4"/></symbol>
+  <symbol id="i-s-interface" viewBox="0 0 24 24"><path d="M6 3.5l12 6.5-5.2 1.6-1.8 5.4z"/></symbol>
+  <symbol id="i-s-privacy" viewBox="0 0 24 24"><path d="M12 3.5l7 2.8v5.2c0 4.7-2.9 7.6-7 9-4.1-1.4-7-4.3-7-9V6.3z"/></symbol>
+  <symbol id="i-s-controls" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="3"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M7 14h10"/></symbol>
+  <symbol id="i-s-playback" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></symbol>
+  <symbol id="i-s-video" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9.5h18"/></symbol>
+  <symbol id="i-s-rec" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.3" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-s-ext" viewBox="0 0 24 24"><path d="M10 4a2 2 0 1 1 4 0v2h3a1 1 0 0 1 1 1v3h-2a2 2 0 1 0 0 4h2v3a1 1 0 0 1-1 1h-3v-2a2 2 0 1 0-4 0v2H7a1 1 0 0 1-1-1v-3h2a2 2 0 1 0 0-4H6V7a1 1 0 0 1 1-1h3z"/></symbol>
+</svg>
+
+<noscript><p style="padding:24px;font-family:system-ui">VLC Player needs JavaScript to run.</p></noscript>
+<div class="win v-lib" id="win">
+  <header class="tb" id="tb">
+    <div class="tl">
+      <button class="wb logo" id="bLogo" data-ic="cone" aria-label="VLC Player menu"></button>
+      <button class="wb" id="bMenu" data-ic="dots" aria-label="Menu"></button>
+      <button class="wb" id="bSide" data-ic="sidebar" aria-label="Toggle sidebar" hidden></button>
+      <span class="vsep" id="tbSep" hidden></span>
+      <span class="crumb" id="tbCrumb" hidden><span data-ic="folder" style="display:grid"></span><span id="tbSec">Videos</span></span>
+    </div>
+    <div class="ttl" id="ttl">VLC Player</div>
+    <div class="tr">
+      <button class="wb" id="wMin" data-ic="min" aria-label="Picture in picture" title="Picture in picture"></button>
+      <button class="wb" id="wMax" data-ic="max" aria-label="Full screen window" title="Full screen window"></button>
+      <button class="wb" id="wFs" data-ic="fs" aria-label="Video full screen" title="Video full screen"></button>
+      <button class="wb" id="wClose" data-ic="close" aria-label="Stop and close player" title="Stop and close player"></button>
+    </div>
+  </header>
+
+  <div class="body" id="body">
+    <nav class="sbcard" id="sbcard" aria-label="Library"></nav>
+    <nav class="rail" id="rail" aria-label="Library"></nav>
+    <section class="panel" id="panel"></section>
+    <main class="content" id="content">
+      <div class="lib" id="lib"></div>
+      <section class="stage" id="stage" aria-label="Player">
+        <video id="v" playsinline></video>
+        <canvas id="viz"></canvas>
+        <div class="cover" id="coverName"></div>
+        <div class="stats" id="stats" hidden></div>
+        <div class="err" id="err" hidden>
+          <h2>This file can't be played here</h2>
+          <p id="errMsg"></p>
+          <div class="row2">
+            <button class="btn" id="errNext" type="button">Play next</button>
+            <button class="btn pri" id="errOpen" type="button">Add another file</button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <aside class="queue" id="queue" aria-label="Play queue"></aside>
+  </div>
+
+  <footer class="bar" id="bar">
+    <button class="bi" id="bNow" data-ic="video" aria-label="Show video" title="Show video" hidden></button>
+    <button class="bi" id="bPrev" data-ic="prev" aria-label="Previous item" title="Previous item (P)"></button>
+    <button class="pb" id="bPlay" aria-label="Play" title="Play / pause (Space)"></button>
+    <button class="bi" id="bNext" data-ic="next" aria-label="Next item" title="Next item (N)"></button>
+    <span class="tm" id="tCur">00:00:00</span>
+    <div class="seekb" id="seek" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="sfl" id="sfl"></div><div class="mk" id="mkA"></div><div class="mk" id="mkB"></div><div class="sth" id="sth"></div>
+      <div class="tip" id="tip">00:00:00</div>
+    </div>
+    <span class="tm" id="tTot">00:00:00</span>
+    <button class="bi" id="bVol" aria-label="Mute" title="Mute (M)"></button>
+    <div class="volw"><div class="volsh"><div class="volf" id="volf"></div></div><input id="vol" type="range" min="0" max="100" value="100" aria-label="Volume"></div>
+    <button class="bi" id="bAud" data-ic="audio" aria-label="Audio" title="Audio"></button>
+    <button class="bi" id="bSub" data-ic="sub" aria-label="Subtitles" title="Subtitles (C)"></button>
+    <button class="bi" id="bGear" data-ic="gear" aria-label="More settings" title="More settings"></button>
+    <button class="bi" id="bQ" data-ic="queue" aria-label="Play queue" title="Play queue" aria-pressed="false"></button>
+  </footer>
+  <div class="osd" id="osd" role="status" aria-live="polite"></div>
+</div>
+
+<input type="file" id="fileIn" multiple hidden accept="video/*,audio/*,.mkv,.avi,.flv,.wmv,.ts,.m2ts,.mov,.m4v,.flac,.opus,.ogg,.wma,.srt,.vtt">
+<input type="file" id="dirIn" webkitdirectory multiple hidden>
+<input type="file" id="subIn" hidden accept=".srt,.vtt,text/vtt">
+
+<dialog id="addDlg"><div class="dlg">
+  <h2>Add item</h2>
+  <div class="addgrid">
+    <button class="btn" id="addFiles" type="button"><span data-ic="m-open" style="display:grid"></span>Open files</button>
+    <button class="btn" id="addDir" type="button"><span data-ic="folder" style="display:grid"></span>Open folder</button>
+    <button class="btn" id="addNet" type="button"><span data-ic="network" style="display:grid"></span>Open network stream</button>
+  </div>
+  <div class="row2"><button class="btn" data-close type="button">Cancel</button></div>
+</div></dialog>
+
+<dialog id="pDlg"><div class="dlg">
+  <h2 id="pTitle">Name</h2>
+  <input class="fld" id="pIn" type="text" autocomplete="off" aria-label="Name">
+  <div class="row2"><button class="btn" data-close type="button">Cancel</button><button class="btn pri" id="pOk" type="button">Save</button></div>
+</div></dialog>
+
+<dialog id="cDlg"><div class="dlg">
+  <h2>Are you sure?</h2>
+  <p id="cMsg"></p>
+  <div class="row2"><button class="btn" data-close type="button">Cancel</button><button class="btn pri" id="cYes" type="button">Continue</button></div>
+</div></dialog>
+
+<dialog id="shotDlg"><div class="dlg" style="width:min(720px,92vw)">
+  <h2>Screenshot</h2>
+  <img id="shotImg" alt="Captured video frame">
+  <p style="margin-top:10px">Right-click or long-press the image to save it.</p>
+  <div class="row2"><button class="btn pri" data-close type="button">Close</button></div>
+</div></dialog>
+
+<dialog id="recDlg"><div class="dlg" style="width:min(720px,92vw)">
+  <h2>Recording</h2>
+  <video id="recVid" controls playsinline></video>
+  <p style="margin-top:10px">Right-click or long-press the video and choose Save video as.</p>
+  <div class="row2"><button class="btn pri" data-close type="button">Close</button></div>
+</div></dialog>
+
+<dialog id="setDlg" class="set" aria-label="Settings">
+  <div class="sethead">
+    <label class="srch"><span data-ic="search" style="display:grid"></span><input id="setSearch" type="search" placeholder="Search" aria-label="Search settings"></label>
+    <h2 id="setTitle">Global Settings</h2>
+    <button class="ib" id="setClose" data-ic="close" aria-label="Close settings"></button>
+  </div>
+  <div class="setbody"><nav class="setnav" id="setNav"></nav><div class="setpage" id="setPage"></div></div>
+</dialog>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const icon = (n, c = '') => `<svg class="i ${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const hms = t => { t = Math.floor(isFinite(t) && t > 0 ? t : 0); return `${pad(Math.floor(t/3600))}:${pad(Math.floor(t%3600/60))}:${pad(t%60)}`; };
+const natural = (a, b) => a.localeCompare(b, undefined, {numeric:true, sensitivity:'base'});
+const AUDIO_RE = /\.(mp3|flac|wav|ogg|oga|opus|m4a|aac|wma|aif|aiff)(\?.*)?$/i;
+const SUB_RE = /\.(srt|vtt)$/i;
+const MEDIA_RE = /\.(mp4|m4v|mov|webm|mkv|avi|wmv|flv|ts|m2ts|mts|3gp|ogv|mpg|mpeg|mp3|flac|wav|ogg|oga|opus|m4a|aac|wma|aif|aiff|mka|weba)$/i;
+const isMedia = f => /^(video|audio)\//.test(f.type || '') || MEDIA_RE.test(f.name);
+
+/* ================= settings ================= */
+const DEF = {theme:'dark',accent:'#e0801a',confirm:true,dev:false,hideIdle:true,idleSecs:3,osd:true,remaining:false,history:true,resume:true,
+  speed:1,autoNext:true,scale:'contain',bright:100,contrast:100,sat:100,subDefault:true,subSize:'1.15em',sort:'name',sortDir:1,view:'grid',
+  thumbs:true,thumbAt:0.1,eq:false,eqPre:0,eqBands:[0,0,0,0,0,0,0,0,0,0],preset:'none',shortJump:5,vol:1,eqOpen:true};
+function sanitize(s){
+  const num = (x, d, lo, hi) => Number.isFinite(+x) && x !== null && x !== '' ? Math.min(hi, Math.max(lo, +x)) : d;
+  if (!['dark','light','system'].includes(s.theme)) s.theme = DEF.theme;
+  if (!/^#[0-9a-f]{6}$/i.test(String(s.accent))) s.accent = DEF.accent;
+  ['confirm','dev','hideIdle','osd','remaining','history','resume','autoNext','subDefault','thumbs','eq','eqOpen'].forEach(k => { s[k] = !!s[k]; });
+  s.idleSecs = num(s.idleSecs, 3, 1, 60); s.speed = num(s.speed, 1, .25, 4); s.bright = num(s.bright, 100, 50, 150); s.contrast = num(s.contrast, 100, 50, 150);
+  s.sat = num(s.sat, 100, 0, 200); s.shortJump = num(s.shortJump, 5, 1, 120); s.thumbAt = num(s.thumbAt, .1, 0, .9); s.vol = num(s.vol, 1, 0, 1); s.eqPre = num(s.eqPre, 0, -20, 20);
+  if (!Array.isArray(s.eqBands) || s.eqBands.length !== 10) s.eqBands = [...DEF.eqBands]; else s.eqBands = s.eqBands.map(x => num(x, 0, -20, 20));
+  if (!['contain','cover','fill'].includes(s.scale)) s.scale = 'contain'; if (!['name','added'].includes(s.sort)) s.sort = 'name'; s.sortDir = s.sortDir < 0 ? -1 : 1;
+  if (!['grid','list'].includes(s.view)) s.view = 'grid'; if (!['.9em','1.15em','1.5em','2em'].includes(s.subSize)) s.subSize = '1.15em'; if (typeof s.preset !== 'string') s.preset = 'none';
+  return s;
+}
+let S = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem('vlcplayer.s') || '{}'); } catch (e) {} return sanitize({...DEF, eqBands:[...DEF.eqBands], ...(o && typeof o === 'object' ? o : {})}); })();
+const saveS = () => { try { localStorage.setItem('vlcplayer.s', JSON.stringify(S)); } catch (e) {} };
+
+function inkFor(hex){
+  const n = parseInt(hex.slice(1), 16);
+  const c = [n >> 16 & 255, n >> 8 & 255, n & 255].map(x => { x /= 255; return x <= .03928 ? x/12.92 : Math.pow((x + .055)/1.055, 2.4); });
+  return (.2126*c[0] + .7152*c[1] + .0722*c[2]) > .2 ? '#141414' : '#ffffff';
+}
+function applyTheme(){
+  const r = document.documentElement;
+  if (S.theme === 'system') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', S.theme);
+  r.style.setProperty('--accent', S.accent); r.style.setProperty('--accent-ink', inkFor(S.accent)); r.style.setProperty('--cue', S.subSize);
+}
+
+/* ================= state ================= */
+const win = $('#win'), v = $('#v'), stage = $('#stage');
+let items = [], byId = {}, playlists = [], nextId = 1, nextPl = 1;
+let queue = [], qi = -1, shuffle = false, repeat = 'off';
+let nav = {sec:'videos', path:[]}, hist = [nav], hi = 0, q = '';
+let view = 'library', panelOpen = false, queueOpen = false, uiHidden = false;
+let dragging = false, idleTimer = null, clickTimer = null, pendingResume = false, resumeAt = 0, lastMenuClose = 0, wakeLock = null;
+let abA = null, abB = null, subDelay = 0, rec = null, recChunks = [];
+let ctx = null, analyser = null, pre = null, filters = [];
+const origCues = new WeakMap();
+const cur = () => qi >= 0 ? byId[queue[qi]] || null : null;
+const getPl = id => playlists.find(p => p.id === id);
+
+let osdT;
+function toast(m){ const o = $('#osd'); o.textContent = m; o.classList.add('show'); clearTimeout(osdT); osdT = setTimeout(() => o.classList.remove('show'), 1400); }
+const osd = m => { if (S.osd) toast(m); };
+
+/* ================= library ================= */
+const NAVS = [['home','Home','home'],['videos','Videos','video'],['music','Music','music'],['network','Network','network'],['playlists','Playlists','playlists'],['recent','Recent','recent'],['add','Add item','plus']];
+const FILLED = {home:'home-f', videos:'video-f', music:'music-f'};
+const secLabel = s => ({home:'Home',videos:'Videos',music:'Music',network:'Network',playlists:'Playlists',recent:'Recent'}[s] || s);
+
+function crumbParts(){
+  const a = [{l:secLabel(nav.sec), p:[]}];
+  if (nav.sec === 'playlists' && nav.path.length){ const pl = getPl(nav.path[0]); a.push({l:pl ? pl.name : 'Playlist', p:[...nav.path]}); }
+  else nav.path.forEach((n, i) => a.push({l:n, p:nav.path.slice(0, i + 1)}));
+  return a;
+}
+function navigate(sec, path = []){ nav = {sec, path}; hist = hist.slice(0, hi + 1); hist.push(nav); hi = hist.length - 1; q = ''; render(); }
+function go(i){ if (i < 0 || i >= hist.length) return; hi = i; nav = hist[i]; q = ''; render(); }
+
+const pathStarts = (p, pre) => p.length >= pre.length && pre.every((x, i) => p[i] === x);
+const matchQ = i => !q || i.name.toLowerCase().includes(q.toLowerCase());
+function sortItems(a){ const d = S.sortDir; return a.sort((x, y) => S.sort === 'added' ? (x.added - y.added)*d || natural(x.name, y.name) : natural(x.name, y.name)*d); }
+
+function getListing(){
+  const sec = nav.sec; let folders = [], groups = [];
+  if (sec === 'videos' || sec === 'music'){
+    const k = sec === 'music' ? 'audio' : 'video', pool = items.filter(i => i.kind === k && !i.net); let files = [];
+    if (q) files = pool.filter(matchQ);
+    else { const seen = {}; pool.forEach(i => { if (pathStarts(i.path, nav.path)){ if (i.path.length === nav.path.length) files.push(i); else seen[i.path[nav.path.length]] = 1; } });
+      folders = Object.keys(seen).sort(natural); if (S.sortDir < 0) folders.reverse(); }
+    groups = [{files:sortItems(files)}];
+  } else if (sec === 'home'){
+    const cont = items.filter(i => i.prog > .01 && i.prog < .97 && matchQ(i)).sort((a, b) => b.last - a.last);
+    const rec2 = items.filter(matchQ).sort((a, b) => b.added - a.added).slice(0, 30);
+    groups = [{t:'Continue watching', files:cont}, {t:'Recently added', files:rec2}].filter(g => g.files.length);
+  } else if (sec === 'recent'){ groups = [{files:items.filter(i => i.last && matchQ(i)).sort((a, b) => b.last - a.last)}]; }
+  else if (sec === 'network'){ groups = [{files:sortItems(items.filter(i => i.net && matchQ(i)))}]; }
+  else if (sec === 'playlists' && nav.path.length){ const pl = getPl(nav.path[0]); groups = [{files:(pl ? pl.ids : []).map(id => byId[id]).filter(Boolean).filter(matchQ)}]; }
+  return {folders, groups, files:groups.flatMap(g => g.files)};
+}
+
+const thumbInner = it => it.thumb ? `<img alt="" src="${it.thumb}">` : `<span class="ph">${icon(it.kind === 'audio' ? 'music' : it.net ? 'network' : 'video')}</span>`;
+const tileHTML = it => { const seen = it.prog > .01;
+  return `<button class="tile${seen ? ' seen' : ''}" data-id="${it.id}" type="button"><div class="th" data-th="${it.id}">${thumbInner(it)}${seen ? `<i class="pg" style="width:${Math.round(Math.min(1, it.prog)*100)}%"></i>` : ''}</div><div class="nm">${esc(it.name)}</div></button>`; };
+const folderTile = n => `<button class="tile" data-folder="${esc(n)}" type="button"><div class="th"><span class="ph">${icon('folder')}</span></div><div class="nm">${esc(n)}</div></button>`;
+const rowHTML = it => `<button class="lrow${it.prog > .01 ? ' seen' : ''}${cur() && cur().id === it.id ? ' cur' : ''}" data-id="${it.id}" type="button"><span class="mini" data-th="${it.id}">${thumbInner(it)}</span><span class="n">${esc(it.name)}</span></button>`;
+const folderRow = n => `<button class="lrow" data-folder="${esc(n)}" type="button"><span class="mini">${icon('folder')}</span><span class="n">${esc(n)}</span></button>`;
+const netCard = () => `<div class="netcard"><h3>Open a network stream</h3><p>Paste a direct link to a video or audio file.</p><div class="netrow"><input class="fld netUrl" type="text" placeholder="https://example.com/video.mp4" aria-label="Media URL" autocomplete="off"><button class="btn pri" data-act="playurl" type="button">Play</button></div></div>`;
+
+function emptyHTML(sec){
+  const open = `<div class="row2"><button class="btn pri" data-act="openfiles" type="button">Open files</button><button class="btn" data-act="openfolder" type="button">Open folder</button></div>`;
+  if (sec === 'videos') return `<div class="empty"><h3>No videos yet</h3><p>Open files or a folder from your device. Folders keep their structure so you can browse them.</p>${open}</div>`;
+  if (sec === 'music') return `<div class="empty"><h3>No music yet</h3><p>Open audio files or a folder of music.</p>${open}</div>`;
+  if (sec === 'home') return `<div class="empty"><h3>Welcome to VLC Player</h3><p>Open files or drop them anywhere on the window to start playing.</p>${open}</div>`;
+  if (sec === 'recent') return `<div class="empty"><h3>Nothing played yet</h3><p>Items you play will show up here.</p></div>`;
+  if (sec === 'playlists') return `<div class="empty"><h3>This playlist is empty</h3><p>Right-click an item in your library and choose Add to playlist.</p></div>`;
+  return '';
+}
+
+function fillList(c, mode){
+  const sec = nav.sec, panel = mode === 'panel', asList = panel || S.view === 'list'; let html = '', cnt = 0;
+  if (sec === 'playlists' && !nav.path.length){
+    cnt = playlists.length;
+    html = `<div><button class="prow dim" data-act="newpl" type="button">${icon('plus')}<span>Create playlist</span></button>${playlists.map(p => `<button class="prow" data-pl="${p.id}" type="button">${icon('playlists')}<span>${esc(p.name)}</span></button>`).join('')}</div>`;
+  } else {
+    const d = getListing(); cnt = d.folders.length + d.files.length;
+    if (sec === 'network') html += netCard();
+    if (!cnt) html += sec === 'network' ? '' : (q ? `<div class="empty"><h3>No results</h3><p>Nothing matches \u201C${esc(q)}\u201D.</p></div>` : emptyHTML(sec));
+    else d.groups.forEach((g, gi) => {
+      if (g.t) html += `<h3 class="gh">${g.t}</h3>`;
+      const f = gi === 0 ? d.folders : [];
+      html += asList ? `<div>${f.map(folderRow).join('')}${g.files.map(rowHTML).join('')}</div>` : `<div class="grid">${f.map(folderTile).join('')}${g.files.map(tileHTML).join('')}</div>`;
+    });
+    if (!d.groups.length && d.folders.length) html += asList ? `<div>${d.folders.map(folderRow).join('')}</div>` : `<div class="grid">${d.folders.map(folderTile).join('')}</div>`;
+  }
+  c.innerHTML = html;
+  const ce = panel ? $('#pcnt') : $('#lcnt'); if (ce) ce.textContent = `${cnt} item${cnt === 1 ? '' : 's'}`;
+}
+
+function renderNavs(){
+  $('#sbcard').innerHTML = NAVS.map(([k, l, ic]) => `<button class="sbi${nav.sec === k ? ' on' : ''}" data-nav="${k}" type="button">${icon(nav.sec === k && FILLED[k] ? FILLED[k] : ic)}<span>${l}</span></button>`).join('');
+  $('#rail').innerHTML = NAVS.map(([k, l, ic]) => `<button class="rl${nav.sec === k ? ' on' : ''}" data-nav="${k}" title="${l}" aria-label="${l}" type="button">${icon(ic)}</button>`).join('');
+}
+function renderLibrary(){
+  const parts = crumbParts(), inPl = nav.sec === 'playlists' && nav.path.length;
+  $('#lib').innerHTML = `<div class="ltool"><button class="ib" data-h="back" aria-label="Back" ${hi <= 0 ? 'disabled' : ''}>${icon('back')}</button><button class="ib dim" data-h="fwd" aria-label="Forward" ${hi >= hist.length - 1 ? 'disabled' : ''}>${icon('fwd')}</button>
+    <nav class="bc" aria-label="Breadcrumb">${parts.map((c, i) => i === parts.length - 1 ? `<b>${esc(c.l)}</b>` : `<button data-crumb="${i}" type="button">${esc(c.l)}</button><i class="tri"></i>`).join('')}</nav>
+    <span class="sp"></span>${inPl ? `<button class="btn pri sm" data-act="playpl" type="button">Play all</button>` : ''}<span class="cnt" id="lcnt"></span>
+    <button class="ib" data-h="sort" aria-label="Sort" title="Sort">${icon('sort')}</button><button class="ib" data-h="view" aria-label="Switch view" title="Switch view">${icon(S.view === 'grid' ? 'grid' : 'list')}</button>
+    <label class="srch">${icon('search')}<input id="lsearch" type="search" placeholder="Search" value="${esc(q)}" aria-label="Search library"></label>
+    <button class="ib" data-h="dots" aria-label="More" title="More">${icon('dots')}</button></div><div class="llist" id="llist"></div>`;
+  fillList($('#llist'), 'lib');
+}
+function renderPanel(){
+  const parts = crumbParts(), t = parts[parts.length - 1].l;
+  $('#panel').innerHTML = `<div class="phead"><button class="ib" data-h="back" aria-label="Back" ${hi <= 0 ? 'disabled' : ''}>${icon('back')}</button><button class="ib dim" data-h="fwd" aria-label="Forward" ${hi >= hist.length - 1 ? 'disabled' : ''}>${icon('fwd')}</button><div class="t">${esc(t)}</div><button class="ib" data-h="dots" aria-label="More">${icon('dots')}</button><button class="ib" data-h="expand" aria-label="Open full library" title="Open full library">${icon('opennew')}</button></div>
+    <div class="pmeta"><span class="cnt" id="pcnt"></span><button class="ib" data-h="sort" aria-label="Sort">${icon('sort')}</button><button class="ib" data-h="view" aria-label="Switch view">${icon('list')}</button><button class="ib" data-h="psearch" aria-label="Search">${icon('search')}</button></div>
+    <label class="srch pser" id="pser" ${q ? '' : 'hidden'}>${icon('search')}<input id="psearch" type="search" placeholder="Search" value="${esc(q)}" aria-label="Search library"></label>
+    <div class="pdiv"></div><div class="plist" id="plist"></div>`;
+  fillList($('#plist'), 'panel');
+}
+function renderQueue(){
+  if (!queueOpen){ $('#queue').innerHTML = ''; return; }
+  $('#queue').innerHTML = `<div class="qhead"><b>Play queue</b><button class="ib" data-h="qdots" aria-label="More">${icon('dots')}</button><button class="ib" data-h="qclose" aria-label="Close queue">${icon('close')}</button></div><div class="plist">${queue.length ? queue.map((id, i) => { const it = byId[id]; return it ? `<button class="lrow${i === qi ? ' cur' : ''}" data-qi="${i}" type="button"><span class="mini" data-th="${it.id}">${thumbInner(it)}</span><span class="n">${esc(it.name)}</span></button>` : ''; }).join('') : `<div class="empty"><p>The queue is empty.</p></div>`}</div>`;
+}
+
+function renderBar(){
+  const it = cur(), paused = v.paused || v.ended;
+  $('#bPlay').innerHTML = icon(paused ? 'play' : 'pause'); $('#bPlay').setAttribute('aria-label', paused ? 'Play' : 'Pause');
+  $('#bNow').hidden = view !== 'library' || !it;
+  const m = v.muted || v.volume === 0; $('#bVol').innerHTML = icon(m ? 'mute' : 'vol');
+  const val = m ? 0 : Math.round(v.volume*100); $('#vol').value = val; $('#volf').style.width = val + '%';
+  $('#bQ').setAttribute('aria-pressed', String(queueOpen));
+  $('#bSub').setAttribute('aria-pressed', String(Array.from(v.textTracks).some(t => t.mode === 'showing')));
+  updateTime();
+}
+function applyLayout(){
+  const has = !!cur(); if (!has) view = 'library';
+  win.classList.toggle('v-lib', view === 'library'); win.classList.toggle('v-play', view === 'player');
+  win.classList.toggle('has-media', has); win.classList.toggle('panel-open', panelOpen);
+  win.classList.toggle('queue-open', queueOpen); win.classList.toggle('noui', uiHidden);
+  $('#bSide').hidden = view !== 'player'; $('#tbSep').hidden = view !== 'player'; $('#tbCrumb').hidden = view !== 'player';
+  $('#tbSec').textContent = secLabel(nav.sec); $('#bSide').setAttribute('aria-pressed', String(panelOpen));
+  $('#ttl').textContent = rec ? '\u25CF Recording' : 'VLC Player'; $('#ttl').classList.toggle('rec', !!rec);
+}
+function render(){
+  applyLayout(); renderNavs();
+  if (view === 'library') renderLibrary(); else if (panelOpen) renderPanel();
+  renderQueue(); renderBar();
+}
+let rafR = 0; const renderSoon = () => { cancelAnimationFrame(rafR); rafR = requestAnimationFrame(render); };
+
+/* ---------- adding media ---------- */
+const thumbQ = {p:Promise.resolve()};
+function patchThumb(it){ $$(`[data-th="${it.id}"]`).forEach(el => { const old = el.querySelector('img,.ph'); if (old) old.outerHTML = thumbInner(it); }); }
+function genThumb(it){
+  if (!S.thumbs || it.kind !== 'video' || it.net || it.thumb || it.noThumb) return;
+  thumbQ.p = thumbQ.p.then(() => new Promise(res => {
+    const vv = document.createElement('video'); vv.muted = true; vv.preload = 'metadata'; vv.playsInline = true; let done = false;
+    const fin = () => { if (done) return; done = true; clearTimeout(t); vv.removeAttribute('src'); vv.load(); res(); };
+    const t = setTimeout(() => { it.noThumb = true; fin(); }, 9000);
+    vv.onloadedmetadata = () => { it.dur = vv.duration || 0; try { vv.currentTime = Math.min(Math.max((vv.duration || 1)*S.thumbAt, .1), vv.duration || .1); } catch (e) { fin(); } };
+    vv.onseeked = () => { try { const c = document.createElement('canvas'), w = 360; c.width = w; c.height = Math.round(w*(vv.videoHeight || 9)/(vv.videoWidth || 16));
+      c.getContext('2d').drawImage(vv, 0, 0, c.width, c.height); it.thumb = c.toDataURL('image/jpeg', .72); patchThumb(it); } catch (e) { it.noThumb = true; } fin(); };
+    vv.onerror = () => { it.noThumb = true; fin(); };
+    vv.src = it.url;
+  }));
+}
+function addFiles(files, opt = {}){
+  const added = [], targets = []; let sub = null, skipped = 0;
+  [...files].forEach(f => {
+    if (SUB_RE.test(f.name)){ sub = f; return; }
+    if (!isMedia(f)){ skipped++; return; }
+    const rel = (f.webkitRelativePath || '').split('/'); rel.pop();
+    const key = `${f.name}|${f.size}|${f.lastModified}|${rel.join('/')}`, dup = items.find(i => i.key === key);
+    if (dup){ targets.push(dup); return; }
+    const it = {id:nextId++, key, name:f.name, url:URL.createObjectURL(f), file:f, net:false, kind:((f.type || '').startsWith('audio/') || AUDIO_RE.test(f.name)) ? 'audio' : 'video', path:rel, added:Date.now(), prog:0, last:0, thumb:null, dur:0};
+    items.push(it); byId[it.id] = it; added.push(it); targets.push(it);
+  });
+  added.forEach(genThumb);
+  if (targets.length){
+    if (opt.play){ const ids = targets.slice().sort((a, b) => natural(a.name, b.name)).map(i => i.id); playQueue(ids, 0); }
+    else if (added.length){
+      const first = added[0], topDir = first.path[0];
+      if (topDir && added.every(i => i.path[0] === topDir)) navigate(first.kind === 'audio' ? 'music' : 'videos', [topDir]);
+      else navigate(first.kind === 'audio' ? 'music' : 'videos', []);
+      toast(`Added ${added.length} item${added.length === 1 ? '' : 's'}${skipped ? ` (skipped ${skipped} other file${skipped === 1 ? '' : 's'})` : ''}`);
+    } else toast('Those files are already in your library');
+  } else if (!sub) toast(skipped ? 'No supported audio or video files found' : 'Nothing to add');
+  if (sub){ if (cur()) loadSubs(sub); else toast('Play a video first, then add subtitles'); }
+}
+async function collectDropped(dt){
+  if (!(dt.items && dt.items.length && dt.items[0].webkitGetAsEntry)) return {files:[...dt.files], dir:false};
+  const entries = [...dt.items].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean), files = []; let dir = false;
+  const readAll = r => new Promise((res, rej) => { const out = []; const step = () => r.readEntries(b => { if (!b.length) res(out); else { out.push(...b); step(); } }, rej); step(); });
+  const walk = async en => {
+    if (en.isFile) await new Promise(res => en.file(f => { try { Object.defineProperty(f, 'webkitRelativePath', {value:en.fullPath.replace(/^\//, '')}); } catch (e) {} files.push(f); res(); }, () => res()));
+    else if (en.isDirectory){ dir = true; const kids = await readAll(en.createReader()).catch(() => []); for (const k of kids) await walk(k); }
+  };
+  for (const en of entries) await walk(en);
+  return {files, dir};
+}
+function openUrl(u){
+  u = (u || '').trim(); if (!/^https?:\/\//i.test(u)){ toast('Enter a link that starts with http:// or https://'); return false; }
+  let name = u; try { name = decodeURIComponent(u.split('?')[0].split('/').pop()) || u; } catch (e) {}
+  const it = {id:nextId++, name, url:u, file:null, net:true, kind:AUDIO_RE.test(u) ? 'audio' : 'video', path:[], added:Date.now(), prog:0, last:0, thumb:null, dur:0};
+  items.push(it); byId[it.id] = it; playQueue([it.id], 0); return true;
+}
+function removeItem(id){
+  const it = byId[id]; if (!it) return; const wasCur = cur() && cur().id === id;
+  if (it.file) URL.revokeObjectURL(it.url);
+  items = items.filter(i => i.id !== id); delete byId[id]; playlists.forEach(p => p.ids = p.ids.filter(x => x !== id));
+  const idx = queue.indexOf(id); queue = queue.filter(x => x !== id);
+  if (wasCur) stop(); else if (idx >= 0 && idx < qi) qi--;
+  render();
+}
+
+/* ================= playback engine ================= */
+function playQueue(ids, start){ queue = ids.slice(); qi = start; loadCurrent(); }
+function loadCurrent(){
+  const it = cur(); if (!it) return;
+  clearSubs(); resetAB(); $('#err').hidden = true;
+  if (ctx && !it.file) v.crossOrigin = 'anonymous'; else v.removeAttribute('crossorigin');
+  v.src = it.url; v.loop = repeat === 'one'; resumeAt = (S.resume && it.prog > .02 && it.prog < .95) ? it.prog : 0; pendingResume = true;
+  stage.classList.toggle('is-audio', it.kind === 'audio'); $('#coverName').textContent = it.name;
+  document.title = it.name + ' \u2013 VLC Player';
+  if (S.history) it.last = Date.now();
+  view = 'player';
+  if (it.file && (it.kind === 'audio' || S.eq)) ensureAudio();
+  const p = v.play(); if (p && p.catch) p.catch(() => {});
+  try { if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({title:it.name}); } catch (e) {}
+  render();
+}
+function stop(){
+  v.pause(); v.removeAttribute('src'); v.load(); qi = -1; queue = []; document.title = 'VLC Player';
+  clearSubs(); resetAB(); $('#err').hidden = true; render();
+}
+function next(){
+  if (!queue.length) return; let n;
+  if (shuffle && queue.length > 1){ do { n = Math.floor(Math.random()*queue.length); } while (n === qi); } else n = qi + 1;
+  if (n >= queue.length){ if (repeat === 'all') n = 0; else return; }
+  qi = n; loadCurrent();
+}
+function prev(){ if (v.currentTime > 3 || qi <= 0){ v.currentTime = 0; return; } qi--; loadCurrent(); }
+function togglePlay(){ if (!cur()) return openFiles(); if (v.paused){ const p = v.play(); if (p && p.catch) p.catch(() => {}); } else v.pause(); }
+
+v.addEventListener('play', () => { if (ctx && ctx.state === 'suspended') ctx.resume(); renderBar(); });
+v.addEventListener('pause', () => { renderBar(); win.classList.remove('idle'); });
+v.addEventListener('ended', () => { const it = cur(); if (it) it.prog = 1; renderBar(); if (repeat !== 'one' && S.autoNext) next(); });
+v.addEventListener('playing', () => { $('#err').hidden = true; });
+v.addEventListener('volumechange', () => { if (!v.muted) S.vol = v.volume; saveS(); renderBar(); });
+v.addEventListener('ratechange', () => { osd(`Speed ${Math.round(v.playbackRate*100)/100}\u00D7`); });
+v.addEventListener('timeupdate', () => { updateTime(); const it = cur(); if (it && S.history && v.duration && !pendingResume) it.prog = Math.min(1, v.currentTime/v.duration); });
+['durationchange','emptied','progress'].forEach(e => v.addEventListener(e, updateTime));
+v.addEventListener('loadedmetadata', () => {
+  const it = cur(); if (it) it.dur = v.duration || 0;
+  if (pendingResume){ pendingResume = false; if (resumeAt && v.duration) v.currentTime = resumeAt*v.duration; resumeAt = 0; }
+  if (S.subDefault) Array.from(v.textTracks).forEach((t, i) => { if (i === 0 && (t.kind === 'subtitles' || t.kind === 'captions')) t.mode = 'showing'; });
+  setupAudioTracks(); refreshTracks(); renderBar();
+});
+v.addEventListener('error', () => {
+  const it = cur(); if (!it) return; let msg;
+  if (ctx && !it.file) msg = 'This server doesn\u2019t allow its media to be used with the equalizer. Reload the page to play it without the equalizer.';
+  else { const ext = (it.name.split('.').pop() || '').toUpperCase(); msg = `\u201C${it.name}\u201D uses a ${ext ? ext + ' ' : ''}container or codec that this browser can\u2019t decode. Chrome and Edge support the most formats. For MKV, AVI or HEVC files, open them in VLC on your computer.`; }
+  $('#errMsg').textContent = msg; $('#errNext').hidden = queue.length < 2; $('#err').hidden = false;
+});
+
+function updateTime(){
+  const d = v.duration || 0, t = v.currentTime || 0, p = d ? Math.min(1, t/d) : 0;
+  if (!dragging){ $('#sfl').style.width = (p*100) + '%'; $('#sth').style.left = (p*100) + '%'; $('#seek').setAttribute('aria-valuenow', Math.round(p*100)); $('#seek').setAttribute('aria-valuetext', hms(t) + ' of ' + hms(d)); }
+  $('#tCur').textContent = hms(t); $('#tTot').textContent = S.remaining && d ? '-' + hms(d - t) : hms(d);
+  if (abB !== null && t >= abB) v.currentTime = abA;
+}
+
+/* seek bar */
+const seek = $('#seek');
+const pctFrom = e => { const r = seek.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left)/r.width)); };
+const showTip = p => { $('#tip').style.left = (p*100) + '%'; $('#tip').textContent = hms(p*(v.duration || 0)); };
+seek.addEventListener('pointerdown', e => { if (!v.duration) return; dragging = true; seek.classList.add('drag'); seek.setPointerCapture(e.pointerId); const p = pctFrom(e); $('#sfl').style.width = p*100 + '%'; $('#sth').style.left = p*100 + '%'; showTip(p); });
+seek.addEventListener('pointermove', e => { const p = pctFrom(e); showTip(p); if (dragging){ $('#sfl').style.width = p*100 + '%'; $('#sth').style.left = p*100 + '%'; } });
+seek.addEventListener('pointerup', e => { if (!dragging) return; dragging = false; seek.classList.remove('drag'); v.currentTime = pctFrom(e)*(v.duration || 0); updateTime(); });
+seek.addEventListener('pointercancel', () => { dragging = false; seek.classList.remove('drag'); });
+const skip = s => { if (!v.duration) return; v.currentTime = Math.min(v.duration, Math.max(0, v.currentTime + s)); osd(`${s > 0 ? '+' : ''}${s} s`); };
+
+/* volume */
+$('#vol').addEventListener('input', e => { v.muted = false; v.volume = Number(e.target.value)/100; });
+$('#bVol').addEventListener('click', () => { v.muted = !v.muted; });
+const setVol = d => { v.muted = false; v.volume = Math.min(1, Math.max(0, v.volume + d)); osd(`Volume ${Math.round(v.volume*100)}%`); };
+const setSpeed = s => { s = Math.min(4, Math.max(.25, Math.round(s*100)/100)); v.defaultPlaybackRate = s; v.playbackRate = s; };
+const applyScale = () => { v.style.objectFit = S.scale; };
+const applyFilter = () => { v.style.filter = (S.bright === 100 && S.contrast === 100 && S.sat === 100) ? '' : `brightness(${S.bright}%) contrast(${S.contrast}%) saturate(${S.sat}%)`; };
+
+/* A-B loop, frames, screenshot, pip, fullscreen */
+function resetAB(){ abA = abB = null; renderAB(); }
+function renderAB(){ const d = v.duration || 1, a = $('#mkA'), b = $('#mkB');
+  a.style.display = abA !== null ? 'block' : 'none'; a.style.left = (abA/d*100) + '%'; b.style.display = abB !== null ? 'block' : 'none'; b.style.left = (abB/d*100) + '%'; }
+function cycleAB(){
+  if (!v.duration) return;
+  if (abA === null){ abA = v.currentTime; osd('A set ' + hms(abA)); }
+  else if (abB === null){ if (v.currentTime <= abA + .3){ osd('Pick a later point for B'); return; } abB = v.currentTime; osd('Looping A\u2013B'); }
+  else { abA = abB = null; osd('A\u2013B loop cleared'); }
+  renderAB();
+}
+const frame = dir => { if (!v.duration) return; v.pause(); v.currentTime = Math.max(0, v.currentTime + dir/30); };
+function shot(){
+  if (!v.videoWidth){ toast('No video frame to capture'); return; }
+  try { const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0); $('#shotImg').src = c.toDataURL('image/png'); $('#shotDlg').showModal(); }
+  catch (e) { toast('This source doesn\u2019t allow screenshots'); }
+}
+function togglePip(){
+  if (!document.pictureInPictureEnabled || !v.requestPictureInPicture){ toast('Picture in picture isn\u2019t available here'); return; }
+  if (document.pictureInPictureElement) document.exitPictureInPicture(); else v.requestPictureInPicture().catch(() => toast('Play a video first'));
+}
+function toggleFs(videoOnly){
+  if (document.fullscreenElement){ document.exitFullscreen(); return; }
+  if (videoOnly && cur()){ view = 'player'; panelOpen = false; render(); }
+  if (win.requestFullscreen) win.requestFullscreen().catch(() => {}); else if (v.webkitEnterFullscreen && cur()) v.webkitEnterFullscreen();
+}
+document.addEventListener('fullscreenchange', () => { win.classList.toggle('fs', !!document.fullscreenElement); wake(); });
+function wake(){
+  win.classList.remove('idle'); clearTimeout(idleTimer);
+  if (document.fullscreenElement && S.hideIdle) idleTimer = setTimeout(() => { if (!v.paused && !dragging) win.classList.add('idle'); }, S.idleSecs*1000);
+}
+win.addEventListener('pointermove', wake); win.addEventListener('pointerdown', wake);
+
+/* recording */
+function toggleRecord(){
+  if (rec){ rec.stop(); return; }
+  if (!cur()){ toast('Start playback first'); return; }
+  const cs = v.captureStream ? v.captureStream() : v.mozCaptureStream ? v.mozCaptureStream() : null;
+  if (!cs || !window.MediaRecorder){ toast('Recording isn\u2019t supported in this browser'); return; }
+  try { rec = new MediaRecorder(cs); } catch (e) { rec = null; toast('Recording isn\u2019t supported for this media'); return; }
+  recChunks = []; rec.ondataavailable = e => { if (e.data && e.data.size) recChunks.push(e.data); };
+  rec.onstop = () => { const blob = new Blob(recChunks, {type:(rec && rec.mimeType) || 'video/webm'}); rec = null; applyLayout();
+    $('#recVid').src = URL.createObjectURL(blob); $('#recDlg').showModal(); };
+  rec.start(1000); applyLayout(); toast('Recording started');
+}
+
+/* ================= audio graph: equalizer + visualizer ================= */
+const BANDS = [60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000];
+const pctOf = x => (x + 20)/40*100;
+function ensureAudio(){
+  if (ctx) return true; const it = cur(); if (!it || !it.file) return false;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; ctx = new AC(); const src = ctx.createMediaElementSource(v);
+    pre = ctx.createGain(); filters = BANDS.map(f => { const b = ctx.createBiquadFilter(); b.type = 'peaking'; b.frequency.value = f; b.Q.value = 1.1; return b; });
+    analyser = ctx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = .8;
+    src.connect(pre); let n = pre; filters.forEach(b => { n.connect(b); n = b; }); n.connect(analyser); analyser.connect(ctx.destination); applyEQ(); return true;
+  } catch (e) { ctx = null; analyser = null; return false; }
+}
+function applyEQ(){ if (!ctx) return; pre.gain.value = S.eq ? Math.pow(10, S.eqPre/20) : 1; filters.forEach((b, i) => { b.gain.value = S.eq ? S.eqBands[i] : 0; }); }
+const PRESETS = {flat:[0,[0,0,0,0,0,0,0,0,0,0]], rock:[0,[5,4,2,-2,-3,2,5,6,6,6]], pop:[0,[-1,3,5,6,4,0,-1,-2,-2,-1]], classical:[0,[0,0,0,0,0,0,-4,-4,-4,-6]],
+  bass:[0,[8,6,4,2,0,0,0,0,0,0]], treble:[0,[0,0,0,0,0,1,3,5,7,8]], vocal:[0,[-3,-2,0,3,5,5,3,0,-2,-3]]};
+function applyPreset(name){ const p = PRESETS[name]; if (!p) return; S.eqPre = p[0]; S.eqBands = [...p[1]]; applyEQ(); }
+
+const cv = $('#viz'), cx = cv.getContext('2d');
+const sizeCanvas = () => { const d = window.devicePixelRatio || 1; cv.width = Math.max(1, cv.clientWidth*d); cv.height = Math.max(1, cv.clientHeight*d); };
+window.addEventListener('resize', sizeCanvas); window.addEventListener('resize', () => closeMenus());
+(function draw(){
+  requestAnimationFrame(draw);
+  if (!stage.classList.contains('is-audio') || view !== 'player') return;
+  if (cv.width <= 1) sizeCanvas();
+  const w = cv.width, h = cv.height, n = 40, bw = w/(n*2); cx.clearRect(0, 0, w, h);
+  cx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#e0801a';
+  let data = null; if (analyser){ data = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(data); }
+  const base = h*.62;
+  for (let i = 0; i < n; i++){ const val = data ? data[Math.floor(i*(data.length*.7)/n)]/255 : 0, bh = Math.max(4, val*h*.34);
+    cx.fillRect(w/2 + i*bw + 2, base - bh, bw - 4, bh*2); cx.fillRect(w/2 - (i + 1)*bw + 2, base - bh, bw - 4, bh*2); }
+})();
+setInterval(() => {
+  const st = $('#stats'); if (!S.dev || !cur() || view !== 'player'){ st.hidden = true; return; }
+  const qd = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : {}; st.hidden = false;
+  st.textContent = [`File      ${cur().name}`, `Size      ${v.videoWidth}\u00D7${v.videoHeight}`, `Time      ${hms(v.currentTime)} / ${hms(v.duration)}`, `Speed     ${v.playbackRate}\u00D7`,
+    `Frames    ${qd.totalVideoFrames ?? '-'}  dropped ${qd.droppedVideoFrames ?? '-'}`, `Buffered  ${v.buffered.length ? hms(v.buffered.end(v.buffered.length - 1)) : '-'}`, `Audio     ${ctx ? 'effects on' : 'direct'}`].join('\n');
+}, 500);
+
+/* ================= subtitles + audio tracks ================= */
+function clearSubs(){ $$('track', v).forEach(t => t.remove()); subDelay = 0; refreshTracks(); }
+const srtToVtt = t => 'WEBVTT\n\n' + t.replace(/\r+/g, '').replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+async function readText(file){
+  const buf = await file.arrayBuffer(); let txt;
+  try { txt = new TextDecoder('utf-8', {fatal:true}).decode(buf); } catch (e) { txt = new TextDecoder('windows-1252').decode(buf); }
+  return txt.replace(/^\uFEFF/, '');
+}
+function loadSubs(file){
+  readText(file).then(txt => {
+    const vtt = /\.srt$/i.test(file.name) ? srtToVtt(txt) : txt, url = URL.createObjectURL(new Blob([vtt], {type:'text/vtt'}));
+    Array.from(v.textTracks).forEach(t => { if (t.mode === 'showing') t.mode = 'disabled'; });
+    const tr = document.createElement('track'); tr.kind = 'subtitles'; tr.label = file.name; tr.src = url; tr.default = true;
+    tr.addEventListener('load', () => { applyDelay(); refreshTracks(); });
+    v.appendChild(tr); tr.track.mode = 'showing'; refreshTracks(); osd('Subtitles loaded');
+  }).catch(() => toast('Could not read that subtitle file'));
+}
+function applyDelay(){
+  Array.from(v.textTracks).forEach(t => {
+    if (!t.cues || !t.cues.length) return; let o = origCues.get(t);
+    if (!o){ o = Array.from(t.cues).map(c => [c.startTime, c.endTime]); origCues.set(t, o); }
+    Array.from(t.cues).forEach((c, i) => { if (o[i]){ c.startTime = Math.max(0, o[i][0] + subDelay); c.endTime = Math.max(.01, o[i][1] + subDelay); } });
+  });
+}
+const subTracks = () => Array.from(v.textTracks).filter(t => t.kind === 'subtitles' || t.kind === 'captions');
+function refreshTracks(){ $('#bSub').setAttribute('aria-pressed', String(subTracks().some(t => t.mode === 'showing'))); }
+if (v.textTracks && v.textTracks.addEventListener) v.textTracks.addEventListener('addtrack', refreshTracks);
+function toggleCC(){
+  const tr = subTracks(); if (!tr.length){ $('#subIn').click(); return; }
+  const showing = tr.some(t => t.mode === 'showing'); tr.forEach((t, i) => { t.mode = (!showing && i === 0) ? 'showing' : 'disabled'; });
+  refreshTracks(); osd(showing ? 'Subtitles off' : 'Subtitles on');
+}
+const nudgeSubs = d => { subDelay = Math.round((subDelay + d)*10)/10; applyDelay(); osd(`Subtitle delay ${subDelay.toFixed(1)} s`); };
+let audioTracksOK = false;
+function setupAudioTracks(){ audioTracksOK = !!(v.audioTracks && v.audioTracks.length > 1); }
+
+/* ================= menus ================= */
+let menuReturn = null;
+function closeMenus(){ const m = $('#ctxmenu'); if (!m) return; m.remove(); document.removeEventListener('pointerdown', outside, true); lastMenuClose = Date.now(); if (menuReturn && document.contains(menuReturn)) menuReturn.focus({preventScroll:true}); menuReturn = null; }
+function outside(e){ if (!e.target.closest('.menu')) closeMenus(); }
+function flip(sm){
+  sm.classList.remove('flip'); sm.style.top = '-6px'; let r = sm.getBoundingClientRect();
+  if (r.right > innerWidth - 8){ sm.classList.add('flip'); r = sm.getBoundingClientRect(); }
+  if (r.bottom > innerHeight - 8) sm.style.top = (-6 - (r.bottom - innerHeight + 8)) + 'px';
+}
+function mkMenu(list, cls){
+  const m = document.createElement('div'); m.className = cls; m.setAttribute('role', 'menu');
+  list.forEach(it => {
+    if (it.sep){ const s = document.createElement('div'); s.className = 'msep'; m.appendChild(s); return; }
+    const r = document.createElement('div'); r.className = 'mi' + (it.disabled ? ' dis' : ''); r.setAttribute('role', 'menuitem'); r.tabIndex = -1;
+    r.innerHTML = `<span class="ic">${it.checked ? icon('check') : it.icon ? icon(it.icon) : ''}</span><span class="lb">${esc(it.label)}</span>${it.sub ? `<span class="kb">${icon('chev')}</span>` : it.kbd ? `<span class="kb">${esc(it.kbd)}</span>` : ''}`;
+    if (it.sub){
+      const sm = mkMenu(it.sub, 'sub'); r.appendChild(sm);
+      const open = () => { $$('.mi.open', m).forEach(o => { if (o !== r) o.classList.remove('open'); }); r.classList.add('open'); flip(sm); };
+      r.addEventListener('mouseenter', open); r.addEventListener('click', e => { e.stopPropagation(); open(); });
+    } else {
+      r.addEventListener('mouseenter', () => $$('.mi.open', m).forEach(o => o.classList.remove('open')));
+      r.addEventListener('click', e => { e.stopPropagation(); closeMenus(); if (it.onClick) it.onClick(); });
+    }
+    m.appendChild(r);
+  });
+  return m;
+}
+function showMenu(list, x, y, o = {}){
+  menuReturn = document.activeElement && document.activeElement !== document.body ? document.activeElement : null; const keepRet = menuReturn; closeMenus(); menuReturn = keepRet;
+  const m = mkMenu(list, 'menu'); m.id = 'ctxmenu'; m.tabIndex = -1; m.addEventListener('keydown', menuKey); win.appendChild(m);
+  const w = m.offsetWidth, h = m.offsetHeight; let left = o.right ? x - w : x; left = Math.max(8, Math.min(left, innerWidth - w - 8));
+  let top = o.above ? y - h - 8 : y; top = Math.max(8, Math.min(top, innerHeight - h - 8)); m.style.left = left + 'px'; m.style.top = top + 'px';
+  setTimeout(() => document.addEventListener('pointerdown', outside, true), 0); m.focus({preventScroll:true});
+}
+function menuKey(e){
+  const row = e.target.closest('.mi'), lvl = e.target.closest('.menu,.sub'); if (!lvl) return;
+  const rows = [...lvl.children].filter(c => c.classList.contains('mi') && !c.classList.contains('dis')), i = rows.indexOf(row);
+  if (e.key === 'ArrowDown'){ e.preventDefault(); (rows[i + 1] || rows[0]).focus(); }
+  else if (e.key === 'ArrowUp'){ e.preventDefault(); (i > 0 ? rows[i - 1] : rows[rows.length - 1]).focus(); }
+  else if (e.key === 'ArrowRight' && row && row.querySelector(':scope > .sub')){ e.preventDefault(); row.click(); const f = row.querySelector(':scope > .sub > .mi'); if (f) f.focus(); }
+  else if (e.key === 'ArrowLeft' && lvl.classList.contains('sub')){ e.preventDefault(); const p = lvl.parentElement; p.classList.remove('open'); p.focus(); }
+  else if ((e.key === 'Enter' || e.key === ' ') && row){ e.preventDefault(); row.click(); }
+  else if (e.key === 'Escape'){ e.preventDefault(); closeMenus(); }
+}
+function menuAt(el, list, o){ const r = el.getBoundingClientRect(); showMenu(list, o && o.right ? r.right : r.left, o && o.above ? r.top : r.bottom + 6, o); }
+
+const SPEEDS = [.5, .75, 1, 1.25, 1.5, 2];
+const speedSub = () => SPEEDS.map(s => ({label:s + '\u00D7', checked:Math.abs(v.playbackRate - s) < .001, onClick:() => setSpeed(s)}));
+const scaleSub = () => [['contain','Fit to window'],['cover','Fill window (crop)'],['fill','Stretch']].map(([k, l]) => ({label:l, checked:S.scale === k, onClick:() => { S.scale = k; saveS(); applyScale(); }}));
+function audioTrackSub(){
+  if (!audioTracksOK) return [{label:'Default', checked:true}];
+  return Array.from(v.audioTracks).map((t, i) => ({label:t.label || t.language || `Audio ${i + 1}`, checked:t.enabled, onClick:() => Array.from(v.audioTracks).forEach((x, j) => { x.enabled = i === j; })}));
+}
+function subTrackSub(){
+  const tr = subTracks(), any = tr.some(t => t.mode === 'showing');
+  return [{label:'Off', checked:!any, onClick:() => { tr.forEach(t => t.mode = 'disabled'); refreshTracks(); }}].concat(tr.map(t => ({label:t.label || t.language || 'Track', checked:t.mode === 'showing', onClick:() => { tr.forEach(x => x.mode = x === t ? 'showing' : 'disabled'); applyDelay(); refreshTracks(); }})));
+}
+const toggleEQ = () => { S.eq = !S.eq; saveS(); if (S.eq && !ensureAudio() && !ctx) toast('The equalizer works with files from your device'); applyEQ(); osd('Equalizer ' + (S.eq ? 'on' : 'off')); };
+const audioMenu = () => [
+  {label:v.muted ? 'Unmute' : 'Mute', icon:'m-audio', kbd:'M', onClick:() => { v.muted = !v.muted; }},
+  {label:'Audio track', sub:audioTrackSub()},
+  {label:S.eq ? 'Disable equalizer' : 'Enable equalizer', onClick:toggleEQ},
+  {label:'Equalizer settings\u2026', onClick:() => openSettings('audio')}];
+const subMenu = () => [
+  {label:'Add subtitle file\u2026', onClick:() => $('#subIn').click()},
+  {label:'Subtitle track', sub:subTrackSub()},
+  {label:'Delay \u22120.5 s', onClick:() => nudgeSubs(-.5)}, {label:'Delay +0.5 s', onClick:() => nudgeSubs(.5)},
+  {label:`Reset delay (${subDelay.toFixed(1)} s)`, onClick:() => { subDelay = 0; applyDelay(); }}];
+const playbackSub = () => [
+  {label:'Speed', sub:speedSub()}, {label:'Jump back 10 s', onClick:() => skip(-10)}, {label:'Jump forward 10 s', onClick:() => skip(10)},
+  {label:abB !== null ? 'Clear A\u2013B loop' : abA !== null ? 'Set loop end (B)' : 'Set loop start (A)', kbd:'A', onClick:cycleAB},
+  {label:'Previous frame', kbd:',', onClick:() => frame(-1)}, {label:'Next frame', kbd:'.', onClick:() => frame(1)}];
+const videoSub = () => [
+  {label:'Full screen', kbd:'F', onClick:() => toggleFs(true)}, {label:'Video scaling', sub:scaleSub()},
+  {label:'Screenshot', kbd:'Shift + S', onClick:shot}, {label:'Picture in picture', onClick:togglePip}];
+const themeSub = () => [['dark','Dark'],['light','Light'],['system','System']].map(([k, l]) => ({label:l, checked:S.theme === k, onClick:() => { S.theme = k; saveS(); applyTheme(); }}));
+const moreSub = () => [{label:'Settings\u2026', onClick:() => openSettings('general')}, {label:'Keyboard shortcuts', onClick:() => openSettings('controls')}, {label:'Theme', sub:themeSub()},
+  {label:S.dev ? 'Hide playback statistics' : 'Show playback statistics', onClick:() => { S.dev = !S.dev; saveS(); }}];
+const repeatSub = () => [['off','Off'],['all','Repeat all'],['one','Repeat one']].map(([k, l]) => ({label:l, checked:repeat === k, onClick:() => setRepeat(k)}));
+const plSub = () => [{label:queueOpen ? 'Hide play queue' : 'Show play queue', onClick:toggleQueue}, {label:'Shuffle', checked:shuffle, onClick:() => { shuffle = !shuffle; osd('Shuffle ' + (shuffle ? 'on' : 'off')); }},
+  {label:'Repeat', sub:repeatSub()}, {label:'Clear play queue', onClick:clearQueue}];
+const openSub = () => [{label:'Open files\u2026', onClick:openFiles}, {label:'Open folder\u2026', onClick:() => $('#dirIn').click()}, {label:'Open network stream\u2026', onClick:() => { navigate('network'); }}];
+const mainMenu = () => [
+  {label:v.paused ? 'Play' : 'Pause', icon:'m-play', kbd:'Space', onClick:togglePlay}, {label:'Stop', icon:'m-stop', kbd:'S', onClick:stop},
+  {label:'Previous Item', icon:'m-prev', kbd:'P', onClick:prev}, {label:'Next Item', icon:'m-next', kbd:'N', onClick:next},
+  {label:rec ? 'Stop recording' : 'Record', icon:'m-rec', kbd:'R', onClick:toggleRecord}, {label:'Hide UI', icon:'m-hide', kbd:'Ctrl + \\', onClick:toggleUI},
+  {label:'Playback', icon:'m-playback', sub:playbackSub()}, {label:'Video', icon:'m-clap', sub:videoSub()}, {label:'Audio', icon:'m-audio', sub:audioMenu()},
+  {label:'Subtitle', icon:'m-sub', sub:subMenu()}, {label:'More Settings', icon:'m-gear', sub:moreSub()}, {label:'Playlist', icon:'m-pl', sub:plSub()},
+  {label:'Open Media', icon:'m-open', sub:openSub()}, {label:'Quit VLC', icon:'m-quit', kbd:'Ctrl + Q', onClick:stop}];
+const gearMenu = () => [{label:'Playback speed', sub:speedSub()}, {label:'Video scaling', sub:scaleSub()}, {label:abB !== null ? 'Clear A\u2013B loop' : abA !== null ? 'Set loop end (B)' : 'Set loop start (A)', onClick:cycleAB},
+  {label:'Next frame', onClick:() => frame(1)}, {label:'Screenshot', onClick:shot}, {label:'Picture in picture', onClick:togglePip}, {sep:true}, {label:'Settings\u2026', onClick:() => openSettings('general')}];
+const appMenu = () => [{label:'Open files\u2026', icon:'m-open', onClick:openFiles}, {label:'Open folder\u2026', icon:'folder', onClick:() => $('#dirIn').click()}, {label:'Open network stream\u2026', icon:'network', onClick:() => navigate('network')},
+  {sep:true}, {label:'Settings\u2026', icon:'m-gear', onClick:() => openSettings('general')}, {label:'Theme', sub:themeSub()}, {label:'Hide UI', onClick:toggleUI}];
+const sortMenu = () => [['name', 1, 'Name (A\u2013Z)'], ['name', -1, 'Name (Z\u2013A)'], ['added', -1, 'Newest first'], ['added', 1, 'Oldest first']]
+  .map(([k, d, l]) => ({label:l, checked:S.sort === k && S.sortDir === d, onClick:() => { S.sort = k; S.sortDir = d; saveS(); render(); }}));
+const listMenu = () => [{label:'Open files\u2026', onClick:openFiles}, {label:'Open folder\u2026', onClick:() => $('#dirIn').click()}, {label:'New playlist\u2026', onClick:newPlaylist}, {sep:true},
+  {label:'Clear library', onClick:clearLibrary}];
+
+function setRepeat(k){ repeat = k; v.loop = k === 'one'; osd('Repeat ' + (k === 'off' ? 'off' : k === 'all' ? 'all' : 'one')); }
+function toggleQueue(){ queueOpen = !queueOpen; render(); }
+function clearQueue(){ ask('Remove everything from the play queue and stop playback?', () => { stop(); }); }
+function toggleUI(){ uiHidden = !uiHidden; render(); if (uiHidden) toast('Press Ctrl + \\ to show the interface'); }
+const openFiles = () => $('#fileIn').click();
+
+/* ---------- dialogs & helpers ---------- */
+function ask(msg, yes){ if (!S.confirm){ yes(); return; } $('#cMsg').textContent = msg; $('#cYes').onclick = () => { $('#cDlg').close(); yes(); }; $('#cDlg').showModal(); }
+function promptText(title, val, ok){
+  $('#pTitle').textContent = title; const i = $('#pIn'); i.value = val || '';
+  $('#pOk').onclick = () => { const t = i.value.trim(); if (!t) return; $('#pDlg').close(); ok(t); };
+  i.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); $('#pOk').click(); } };
+  $('#pDlg').showModal(); i.focus(); i.select();
+}
+function newPlaylist(after){ promptText('Create playlist', '', name => { const p = {id:nextPl++, name, ids:[]}; playlists.push(p); if (typeof after === 'function') after(p); else navigate('playlists'); }); }
+function clearLibrary(){ ask('Remove all items from your library?', () => { items.forEach(i => { if (i.file) URL.revokeObjectURL(i.url); }); items = []; byId = {}; playlists.forEach(p => p.ids = []); stop(); render(); }); }
+function addToPlaylist(pl, ids){ ids.forEach(id => { if (!pl.ids.includes(id)) pl.ids.push(id); }); toast(`Added to ${pl.name}`); if (nav.sec === 'playlists') renderSoon(); }
+
+/* ================= library interactions ================= */
+function playFromList(id){ const ids = getListing().files.map(i => i.id); const k = ids.indexOf(id); if (k >= 0) playQueue(ids, k); else playQueue([id], 0); }
+function filesUnder(folder){ const k = nav.sec === 'music' ? 'audio' : 'video', pre = [...nav.path, folder]; return items.filter(i => i.kind === k && !i.net && pathStarts(i.path, pre)).sort((a, b) => natural(a.name, b.name)).map(i => i.id); }
+function act(name, el){
+  if (name === 'openfiles') openFiles();
+  else if (name === 'openfolder') $('#dirIn').click();
+  else if (name === 'newpl') newPlaylist();
+  else if (name === 'playurl'){ const inp = el.closest('.netcard').querySelector('input'); openUrl(inp.value); }
+  else if (name === 'playpl'){ const pl = getPl(nav.path[0]); if (pl && pl.ids.length) playQueue(pl.ids.slice(), 0); else toast('This playlist is empty'); }
+}
+function hAct(name, el){
+  if (name === 'back') go(hi - 1); else if (name === 'fwd') go(hi + 1);
+  else if (name === 'expand'){ view = 'library'; render(); }
+  else if (name === 'dots') menuAt(el, listMenu(), {right:true});
+  else if (name === 'sort') menuAt(el, sortMenu(), {right:true});
+  else if (name === 'view'){ S.view = S.view === 'grid' ? 'list' : 'grid'; saveS(); render(); }
+  else if (name === 'psearch'){ const b = $('#pser'); b.hidden = !b.hidden; if (!b.hidden) $('#psearch').focus(); }
+  else if (name === 'qclose'){ queueOpen = false; render(); }
+  else if (name === 'qdots') menuAt(el, [{label:'Clear play queue', onClick:clearQueue}, {label:'Shuffle', checked:shuffle, onClick:() => { shuffle = !shuffle; }}, {label:'Repeat', sub:repeatSub()}], {right:true});
+}
+document.addEventListener('click', e => {
+  const h = e.target.closest('[data-h]'); if (h && !h.disabled){ hAct(h.dataset.h, h); return; }
+  const n = e.target.closest('[data-nav]'); if (n){ if (n.dataset.nav === 'add') $('#addDlg').showModal(); else navigate(n.dataset.nav); return; }
+  const c = e.target.closest('[data-crumb]'); if (c){ const p = crumbParts()[Number(c.dataset.crumb)]; navigate(nav.sec, p.p); return; }
+  const a = e.target.closest('[data-act]'); if (a){ act(a.dataset.act, a); return; }
+  if (e.target.closest('#lib,#panel')){
+    const pl = e.target.closest('[data-pl]'); if (pl){ navigate('playlists', [Number(pl.dataset.pl)]); return; }
+    const f = e.target.closest('[data-folder]'); if (f){ navigate(nav.sec, [...nav.path, f.dataset.folder]); return; }
+    const t = e.target.closest('[data-id]'); if (t){ playFromList(Number(t.dataset.id)); return; }
+  }
+  const qr = e.target.closest('[data-qi]'); if (qr){ qi = Number(qr.dataset.qi); loadCurrent(); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('netUrl')){ e.preventDefault(); e.target.closest('.netcard').querySelector('[data-act="playurl"]').click(); } });
+document.addEventListener('input', e => {
+  if (e.target.id === 'lsearch' || e.target.id === 'psearch'){ q = e.target.value; fillList($(e.target.id === 'lsearch' ? '#llist' : '#plist'), e.target.id === 'lsearch' ? 'lib' : 'panel'); }
+});
+document.addEventListener('contextmenu', e => {
+  const zone = e.target.closest('#lib,#panel'); if (!zone){ return; }
+  const it = e.target.closest('[data-id]'), pl = e.target.closest('[data-pl]'), fo = e.target.closest('[data-folder]');
+  if (!it && !pl && !fo) return; e.preventDefault();
+  if (it){
+    const id = Number(it.dataset.id), inPl = nav.sec === 'playlists' && nav.path.length, plObj = inPl ? getPl(nav.path[0]) : null;
+    const list = [{label:'Play', icon:'m-play', onClick:() => playFromList(id)}, {label:'Add to queue', onClick:() => { if (!cur()) playQueue([id], 0); else { queue.push(id); renderQueue(); toast('Added to queue'); } }},
+      {label:'Add to playlist', sub:playlists.map(p => ({label:p.name, onClick:() => addToPlaylist(p, [id])})).concat([{label:'New playlist\u2026', onClick:() => newPlaylist(p => addToPlaylist(p, [id]))}])}, {sep:true}];
+    if (plObj) list.push({label:'Remove from playlist', onClick:() => { plObj.ids = plObj.ids.filter(x => x !== id); render(); }});
+    list.push({label:'Remove from library', onClick:() => removeItem(id)}); showMenu(list, e.clientX, e.clientY);
+  } else if (pl){
+    const p = getPl(Number(pl.dataset.pl)); if (!p) return;
+    showMenu([{label:'Play', icon:'m-play', onClick:() => { if (p.ids.length) playQueue(p.ids.slice(), 0); else toast('This playlist is empty'); }},
+      {label:'Rename\u2026', onClick:() => promptText('Rename playlist', p.name, n => { p.name = n; render(); })},
+      {label:'Delete playlist', onClick:() => ask(`Delete \u201C${p.name}\u201D?`, () => { playlists = playlists.filter(x => x !== p); render(); })}], e.clientX, e.clientY);
+  } else if (fo){
+    const name = fo.dataset.folder; showMenu([{label:'Play folder', icon:'m-play', onClick:() => { const ids = filesUnder(name); if (ids.length) playQueue(ids, 0); }},
+      {label:'Add folder to playlist', sub:playlists.map(p => ({label:p.name, onClick:() => addToPlaylist(p, filesUnder(name))}))}], e.clientX, e.clientY);
+  }
+});
+stage.addEventListener('contextmenu', e => { e.preventDefault(); showMenu(mainMenu(), e.clientX, e.clientY); });
+
+/* ================= window chrome wiring ================= */
+$('#bLogo').addEventListener('click', e => menuAt(e.currentTarget, appMenu()));
+$('#bMenu').addEventListener('click', e => menuAt(e.currentTarget, appMenu()));
+$('#bSide').addEventListener('click', () => { panelOpen = !panelOpen; render(); });
+$('#wMin').addEventListener('click', togglePip);
+$('#wMax').addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen(); else if (win.requestFullscreen) win.requestFullscreen().catch(() => {}); });
+$('#wFs').addEventListener('click', () => toggleFs(true));
+$('#wClose').addEventListener('click', () => { if (cur()) stop(); else toast('Nothing is playing'); });
+$('#bPlay').addEventListener('click', togglePlay); $('#bPrev').addEventListener('click', prev); $('#bNext').addEventListener('click', next);
+$('#bNow').addEventListener('click', () => { view = 'player'; render(); });
+$('#bAud').addEventListener('click', e => menuAt(e.currentTarget, audioMenu(), {above:true, right:true}));
+$('#bSub').addEventListener('click', e => menuAt(e.currentTarget, subMenu(), {above:true, right:true}));
+$('#bGear').addEventListener('click', e => menuAt(e.currentTarget, gearMenu(), {above:true, right:true}));
+$('#bQ').addEventListener('click', toggleQueue);
+$('#errNext').addEventListener('click', next); $('#errOpen').addEventListener('click', openFiles);
+stage.addEventListener('click', e => {
+  if (e.target.closest('.err') || Date.now() - lastMenuClose < 300) return;
+  if (clickTimer){ clearTimeout(clickTimer); clickTimer = null; toggleFs(false); return; }
+  clickTimer = setTimeout(() => { clickTimer = null; togglePlay(); }, 230);
+});
+
+$('#fileIn').addEventListener('change', e => { if (e.target.files.length) addFiles(e.target.files, {play:true}); e.target.value = ''; });
+$('#dirIn').addEventListener('change', e => { if (e.target.files.length) addFiles(e.target.files, {play:false}); e.target.value = ''; });
+$('#subIn').addEventListener('change', e => { if (e.target.files[0] && cur()) loadSubs(e.target.files[0]); e.target.value = ''; });
+$('#addFiles').addEventListener('click', () => { $('#addDlg').close(); openFiles(); });
+$('#addDir').addEventListener('click', () => { $('#addDlg').close(); $('#dirIn').click(); });
+$('#addNet').addEventListener('click', () => { $('#addDlg').close(); navigate('network'); });
+$$('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+document.addEventListener('click', e => { const c = e.target.closest('[data-close]'); if (c) c.closest('dialog').close(); });
+document.addEventListener('click', e => { if (e.detail > 0){ const b = e.target.closest('.bi,.pb,.wb,.ib,.rl,.sbi'); if (b) b.blur(); } });
+$('#vol').addEventListener('pointerup', e => e.target.blur());
+$('#recDlg').addEventListener('close', () => { const vv = $('#recVid'); vv.pause(); });
+
+let dragDepth = 0;
+document.addEventListener('dragenter', e => { e.preventDefault(); dragDepth++; win.classList.add('dragging'); });
+document.addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) win.classList.remove('dragging'); });
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => { e.preventDefault(); dragDepth = 0; win.classList.remove('dragging'); if (!e.dataTransfer) return;
+  collectDropped(e.dataTransfer).then(r => { if (r.files.length) addFiles(r.files, {play:!r.dir}); }).catch(() => toast('Could not read the dropped items')); });
+
+/* ================= keyboard ================= */
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (e.key === 'Escape'){ closeMenus(); }
+  if (document.querySelector('dialog[open]')) return;
+  if (t.closest && t.closest('.menu')) return;
+  if (t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || (t.tagName === 'INPUT' && t.type !== 'range')) return;
+  if ((e.ctrlKey || e.metaKey) && e.key === '\\'){ e.preventDefault(); toggleUI(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key === ','){ e.preventDefault(); openSettings('general'); return; }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'q' || e.key === 'Q')){ if (cur()){ e.preventDefault(); stop(); } return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (t.tagName === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
+  const k = e.key; let used = true;
+  switch (k){
+    case ' ': case 'k': case 'K': togglePlay(); break;
+    case 'ArrowLeft': skip(-S.shortJump); break; case 'ArrowRight': skip(S.shortJump); break;
+    case 'j': case 'J': skip(-10); break; case 'l': case 'L': skip(10); break;
+    case 'ArrowUp': setVol(.05); break; case 'ArrowDown': setVol(-.05); break;
+    case 'm': case 'M': v.muted = !v.muted; osd(v.muted ? 'Muted' : 'Unmuted'); break;
+    case 'f': case 'F': toggleFs(true); break;
+    case '[': setSpeed(v.playbackRate - .25); break; case ']': setSpeed(v.playbackRate + .25); break;
+    case ',': frame(-1); break; case '.': frame(1); break;
+    case 'n': case 'N': next(); break; case 'p': case 'P': prev(); break;
+    case 'a': case 'A': cycleAB(); break; case 'c': case 'C': toggleCC(); break;
+    case 's': stop(); break; case 'S': shot(); break;
+    case 'r': case 'R': toggleRecord(); break;
+    default: used = false;
+  }
+  if (used) e.preventDefault(); wake();
+});
+try { if ('mediaSession' in navigator){ navigator.mediaSession.setActionHandler('play', () => v.play()); navigator.mediaSession.setActionHandler('pause', () => v.pause());
+  navigator.mediaSession.setActionHandler('previoustrack', prev); navigator.mediaSession.setActionHandler('nexttrack', next); } } catch (e) {}
+
+/* ================= settings dialog ================= */
+const ACCENTS = [['#e0801a','Orange'],['#b0392b','Red'],['#8c751a','Olive'],['#1e8a2e','Green'],['#1383a0','Teal'],['#1f4eb0','Blue'],['#6a2fb8','Purple'],['#b83a8a','Pink'],['#808080','Grey']];
+const NA = 'Not available in the browser version.';
+const PAGES = [
+ {id:'general', grp:'App', label:'General', ic:'s-general', title:'Global Settings', sections:[
+  {h:'Appearance', rows:[
+    {t:'select', k:'lang', l:'Interface language', opts:[['en','English']], help:'The browser version is available in English.'},
+    {t:'seg', k:'theme', l:'Theme', opts:[['dark','Dark'],['light','Light'],['system','System']], help:'System follows your device setting.'},
+    {t:'swatch', k:'accent', l:'Accent color', opts:ACCENTS}]},
+  {h:'Startup', rows:[
+    {t:'toggle', k:'confirm', l:'Show confirmation and error dialogs', help:'Ask before clearing your library or play queue.'},
+    {t:'toggle', k:'upd', l:'Check for updates automatically', dis:true, on:false, help:NA},
+    {t:'btn', l:'Reset all settings', btn:'Reset', act:'resetall'}]},
+  {h:'Diagnostics', rows:[
+    {t:'toggle', k:'dev', l:'Developer mode', help:'Show playback statistics on top of the video.'},
+    {t:'toggle', k:'log', l:'Save a log', dis:true, on:true, help:NA},
+    {t:'text', l:'Log file', btn:'Browse', help:NA},
+    {t:'select', k:'logd', l:'Log details', opts:[['err','Errors only']], dis:true, help:NA}]},
+  {adv:true}]},
+ {id:'interface', grp:'App', label:'Interface', ic:'s-interface', title:'Interface Settings', sections:[{h:'Window', rows:[
+    {t:'toggle', k:'hideIdle', l:'Hide controls when idle in full screen', help:'Controls fade out when the mouse stops moving.'},
+    {t:'select', k:'idleSecs', l:'Hide controls after', num:1, opts:[[2,'2 seconds'],[3,'3 seconds'],[5,'5 seconds'],[10,'10 seconds']]},
+    {t:'toggle', k:'osd', l:'Show on-screen messages', help:'Short messages for volume, speed and seeking.'},
+    {t:'toggle', k:'remaining', l:'Show remaining time', help:'Count down instead of showing the total length.'}]}]},
+ {id:'privacy', grp:'App', label:'Privacy', ic:'s-privacy', title:'Privacy', sections:[{h:'History', rows:[
+    {t:'toggle', k:'history', l:'Remember playback progress', help:'Keeps resume points and the Recent list for this session.'},
+    {t:'btn', l:'Watch history', btn:'Clear history', act:'clearhist'},
+    {t:'note', text:'Your library and history stay in this browser tab. Files are never uploaded.'}]}]},
+ {id:'controls', grp:'App', label:'Controls', ic:'s-controls', title:'Controls', sections:[
+  {h:'Seeking', rows:[{t:'select', k:'shortJump', l:'Arrow key jump', num:1, opts:[[5,'5 seconds'],[10,'10 seconds'],[15,'15 seconds'],[30,'30 seconds']]}]},
+  {h:'Keyboard shortcuts', rows:[{t:'keys'}]}]},
+ {id:'playback', grp:'Media', label:'Playback', ic:'s-playback', title:'Playback Defaults', sections:[{h:'Playback', rows:[
+    {t:'select', k:'speed', l:'Default speed', num:1, opts:[[.5,'0.5\u00D7'],[.75,'0.75\u00D7'],[1,'1\u00D7'],[1.25,'1.25\u00D7'],[1.5,'1.5\u00D7'],[2,'2\u00D7']]},
+    {t:'toggle', k:'resume', l:'Resume where you left off', help:'Continue partly watched items from their last position.'},
+    {t:'toggle', k:'autoNext', l:'Play the next item automatically'}]}]},
+ {id:'video', grp:'Media', label:'Video', ic:'s-video', title:'Video Defaults', sections:[{h:'Display', rows:[
+    {t:'select', k:'scale', l:'Video scaling', opts:[['contain','Fit to window'],['cover','Fill window (crop)'],['fill','Stretch']]},
+    {t:'range', k:'bright', l:'Brightness', min:50, max:150, unit:'%'}, {t:'range', k:'contrast', l:'Contrast', min:50, max:150, unit:'%'}, {t:'range', k:'sat', l:'Saturation', min:0, max:200, unit:'%'},
+    {t:'btn', l:'Picture adjustments', btn:'Reset', act:'resetvideo'}]}]},
+ {id:'audio', grp:'Media', label:'Audio', ic:'audio', title:'Audio Defaults', sections:[{h:'Effects', rows:[
+    {t:'toggle', k:'eq', l:'Equalizer', help:'Works with files from your device.'},
+    {t:'select', k:'preset', l:'Equalizer preset', opts:[['none','None'],['flat','Flat'],['rock','Rock'],['pop','Pop'],['classical','Classical'],['bass','Bass boost'],['treble','Treble boost'],['vocal','Vocal'],['custom','Custom']], help:'Start from a preset, then fine-tune the bands.'},
+    {t:'eqopen'}, {t:'eq'},
+    {t:'toggle', k:'twopass', l:'Two-pass', dis:true, on:false, help:NA}, {t:'toggle', k:'spatial', l:'Spatial audio', dis:true, on:false, help:NA},
+    {t:'select', k:'spatialMode', l:'Spatial audio mode', opts:[['hp','Headphone virtualization']], dis:true, help:NA}, {t:'toggle', k:'widen', l:'Stereo widening', dis:true, on:false, help:NA}]}]},
+ {id:'subtitles', grp:'Media', label:'Subtitles', ic:'sub', title:'Subtitle Defaults', sections:[{h:'Subtitles', rows:[
+    {t:'toggle', k:'subDefault', l:'Show subtitles by default', help:'Turns on the first subtitle track when a file has one.'},
+    {t:'select', k:'subSize', l:'Subtitle size', opts:[['.9em','Small'],['1.15em','Normal'],['1.5em','Large'],['2em','Extra large']]}]}]},
+ {id:'library', grp:'Media', label:'Library', ic:'folder', title:'Library', sections:[{h:'Browsing', rows:[
+    {t:'select', k:'sortKey', l:'Default sort', opts:[['name:1','Name (A\u2013Z)'],['name:-1','Name (Z\u2013A)'],['added:-1','Newest first'],['added:1','Oldest first']]},
+    {t:'select', k:'view', l:'Default view', opts:[['grid','Grid'],['list','List']]},
+    {t:'btn', l:'Library', btn:'Clear library', act:'clearlib'}]}]},
+ {id:'network', grp:'System', label:'Network', ic:'network', title:'Network', sections:[{h:'Streams', rows:[
+    {t:'note', text:'Network streams play directly in the browser. The server has to allow playback from other sites, and the equalizer only works with files from your device.'},
+    {t:'btn', l:'Network stream', btn:'Open stream\u2026', act:'openstream'}]}]},
+ {id:'performance', grp:'System', label:'Performance', ic:'s-general', title:'Performance', sections:[{h:'Thumbnails', rows:[
+    {t:'toggle', k:'thumbs', l:'Create video thumbnails', help:'Turn off to add large folders faster.'},
+    {t:'select', k:'thumbAt', l:'Thumbnail position', num:1, opts:[[.1,'10% in'],[.25,'25% in'],[.5,'Halfway']]}]}]},
+ {id:'recording', grp:'System', label:'Recording', ic:'s-rec', title:'Recording', sections:[{h:'Recording', rows:[
+    {t:'select', k:'recfmt', l:'Format', opts:[['webm','WebM']], dis:true, help:'Recordings use your browser\u2019s WebM encoder.'},
+    {t:'btn', l:'Record current playback', btn:'Start / stop', act:'rec'},
+    {t:'note', text:'When you stop, the recording opens in a preview where you can save it.'}]}]},
+ {id:'extensions', grp:'System', label:'Extensions', ic:'s-ext', title:'Extensions', sections:[{h:'Extensions', rows:[{t:'note', text:'Extensions aren\u2019t available in the browser version.'}]}]}
+];
+const KEYS = [['Space / K','Play or pause'],['\u2190 / \u2192','Jump back or forward'],['J / L','Jump 10 seconds'],['\u2191 / \u2193','Volume'],['M','Mute'],['F','Full screen'],['[ / ]','Slower or faster'],[', / .','Previous or next frame'],['N / P','Next or previous item'],['A','Set A, set B, clear loop'],['C','Subtitles on or off'],['S','Stop'],['Shift + S','Screenshot'],['R','Record'],['Ctrl + \\','Hide interface'],['Ctrl + ,','Settings']];
+
+let setPage = 'general', setQ = '';
+const valOf = r => r.k === 'sortKey' ? `${S.sort}:${S.sortDir}` : (r.k in S ? S[r.k] : r.on);
+const helpHTML = r => r.help ? `<span class="hlp" title="${esc(r.help)}" tabindex="0">${icon('info')}</span>` : '';
+function eqHTML(){
+  const labels = ['Preamp','60 Hz','170 Hz','310 Hz','600 Hz','1 KHz','3 KHz','6 KHz','12 KHz','14 KHz','16 KHz'], vals = [S.eqPre, ...S.eqBands];
+  return `<div class="eq">${labels.map((l, i) => `<div class="eqc"><div class="vs" data-i="${i}" role="slider" tabindex="0" aria-label="${l}" aria-valuemin="-20" aria-valuemax="20" aria-valuenow="${vals[i]}"><div class="trk"></div><div class="fl" style="height:${pctOf(vals[i])}%"></div><div class="hd" style="bottom:${pctOf(vals[i])}%"></div></div><span class="hz">${l}</span><output class="db">${vals[i].toFixed(1)} dB</output></div>`).join('')}</div>`;
+}
+function setRowHTML(r){
+  const val = valOf(r), lab = (t) => `<div class="lab">${esc(t)}${helpHTML(r)}</div>`;
+  switch (r.t){
+    case 'toggle': return `<div class="row">${lab(r.l)}<button class="tgl" role="switch" aria-checked="${!!val}" aria-label="${esc(r.l)}" data-sk="${r.k}" data-t="toggle" ${r.dis ? `disabled title="${NA}"` : ''} type="button"><i class="kn"></i><span>${val ? 'ON' : 'OFF'}</span></button></div>`;
+    case 'select': return `<div class="row">${lab(r.l)}<select class="sel" aria-label="${esc(r.l)}" data-sk="${r.k}" ${r.num ? 'data-num="1"' : ''} ${r.dis ? 'disabled' : ''}>${r.opts.map(([o, n]) => `<option value="${o}" ${String(o) === String(val) ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`;
+    case 'seg': return `<div class="row">${lab(r.l)}<div class="seg" role="radiogroup" aria-label="${esc(r.l)}">${r.opts.map(([o, n]) => `<button role="radio" aria-checked="${o === val}" data-sk="${r.k}" data-t="seg" data-v="${o}" type="button">${n}</button>`).join('')}</div></div>`;
+    case 'swatch': return `<div class="row">${lab(r.l)}<div class="sw" role="radiogroup" aria-label="${esc(r.l)}">${r.opts.map(([c, n]) => `<button role="radio" aria-checked="${c === val}" aria-label="${n}" title="${n}" data-sk="${r.k}" data-t="swatch" data-v="${c}" type="button"><i style="background:${c}"></i></button>`).join('')}</div></div>`;
+    case 'range': return `<div class="row">${lab(r.l)}<div class="rng"><input type="range" min="${r.min}" max="${r.max}" value="${val}" data-sk="${r.k}" data-unit="${r.unit || ''}" aria-label="${esc(r.l)}"><output>${val}${r.unit || ''}</output></div></div>`;
+    case 'btn': return `<div class="row">${lab(r.l)}<button class="btn" data-sact="${r.act}" type="button">${r.btn}</button></div>`;
+    case 'text': return `<div class="row">${lab(r.l)}<div style="display:flex;gap:10px;align-items:center;width:min(420px,60%)"><input class="fld" disabled aria-label="${esc(r.l)}" style="opacity:.55"><button class="btn" disabled>${r.btn}</button></div></div>`;
+    case 'note': return `<p class="note">${esc(r.text)}</p>`;
+    case 'keys': return `<dl class="keys">${KEYS.map(([a, b]) => `<dt><kbd>${esc(a)}</kbd></dt><dd>${esc(b)}</dd>`).join('')}</dl>`;
+    case 'eqopen': return `<button class="eqopen" data-sact="eqtoggle" type="button">${S.eqOpen ? 'Close Equalizer' : 'Open Equalizer'}${icon(S.eqOpen ? 'chevd' : 'chev')}</button>`;
+    case 'eq': return S.eqOpen ? eqHTML() : '';
+  }
+  return '';
+}
+function pageHTML(pg){ return pg.sections.map(s => s.adv ? `<button class="adv" disabled title="${NA}">Advanced Options ${icon('chev')}</button>` : `<h3 class="sh">${s.h}</h3>${s.rows.map(setRowHTML).join('')}`).join(''); }
+function renderSettings(keepScroll){
+  const sp = $('#setPage'), st = sp.scrollTop;
+  let groups = '', last = '';
+  PAGES.forEach(p => { if (p.grp !== last){ groups += `<div class="ng">${p.grp}</div>`; last = p.grp; } groups += `<button class="ni${!setQ && p.id === setPage ? ' on' : ''}" data-sp="${p.id}" type="button">${icon(p.ic)}<span>${p.label}</span></button>`; });
+  $('#setNav').innerHTML = groups;
+  if (setQ){
+    const ql = setQ.toLowerCase(); let html = '';
+    PAGES.forEach(p => { const rows = p.sections.flatMap(s => s.rows || []).filter(r => r.l && r.l.toLowerCase().includes(ql)); if (rows.length) html += `<h3 class="sh">${p.title}</h3>${rows.map(setRowHTML).join('')}`; });
+    sp.innerHTML = html || `<p class="note">No settings match \u201C${esc(setQ)}\u201D.</p>`; $('#setTitle').textContent = 'Search results';
+  } else { const pg = PAGES.find(p => p.id === setPage); sp.innerHTML = pageHTML(pg); $('#setTitle').textContent = pg.title; }
+  bindEQ(); if (keepScroll) sp.scrollTop = st;
+}
+function openSettings(p){ if (p) setPage = p; setQ = ''; $('#setSearch').value = ''; renderSettings(); if (!$('#setDlg').open) $('#setDlg').showModal(); }
+function setKey(k, val){
+  if (k === 'sortKey'){ const [a, b] = String(val).split(':'); S.sort = a; S.sortDir = Number(b); saveS(); render(); return; }
+  S[k] = val; saveS();
+  if (k === 'theme' || k === 'accent' || k === 'subSize') applyTheme();
+  else if (k === 'scale') applyScale();
+  else if (k === 'bright' || k === 'contrast' || k === 'sat') applyFilter();
+  else if (k === 'eq'){ if (val && !ensureAudio() && !ctx) toast('The equalizer works with files from your device'); applyEQ(); }
+  else if (k === 'preset') applyPreset(val);
+  else if (k === 'speed') setSpeed(val);
+  else if (k === 'remaining') updateTime();
+  else if (k === 'view') render();
+  else if (k === 'thumbs' && val) items.forEach(genThumb);
+}
+function sact(n){
+  if (n === 'clearhist'){ items.forEach(i => { i.prog = 0; i.last = 0; }); render(); toast('History cleared'); }
+  else if (n === 'resetvideo'){ S.bright = S.contrast = S.sat = 100; saveS(); applyFilter(); renderSettings(true); }
+  else if (n === 'clearlib'){ $('#setDlg').close(); clearLibrary(); }
+  else if (n === 'openstream'){ $('#setDlg').close(); navigate('network'); }
+  else if (n === 'rec'){ $('#setDlg').close(); toggleRecord(); }
+  else if (n === 'resetall'){ ask('Reset every setting to its default?', () => { S = sanitize({...DEF, eqBands:[...DEF.eqBands]}); saveS(); applyTheme(); applyScale(); applyFilter(); applyEQ(); setSpeed(S.speed); v.volume = S.vol; renderSettings(true); render(); }); }
+  else if (n === 'eqtoggle'){ S.eqOpen = !S.eqOpen; saveS(); renderSettings(true); }
+}
+function setEq(i, val){
+  if (i === 0) S.eqPre = val; else S.eqBands[i - 1] = val; S.preset = 'custom'; saveS(); applyEQ();
+  const el = $(`.vs[data-i="${i}"]`); if (el){ const p = pctOf(val); el.querySelector('.fl').style.height = p + '%'; el.querySelector('.hd').style.bottom = p + '%'; el.setAttribute('aria-valuenow', val); el.parentElement.querySelector('.db').textContent = val.toFixed(1) + ' dB'; }
+  const ps = $('select[data-sk="preset"]'); if (ps) ps.value = 'custom';
+}
+function bindEQ(){
+  $$('.vs').forEach(el => {
+    const i = Number(el.dataset.i), from = e => { const r = el.getBoundingClientRect(); const p = Math.min(1, Math.max(0, 1 - (e.clientY - r.top)/r.height)); setEq(i, Math.round((p*40 - 20)*2)/2); };
+    el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); el._d = true; from(e); });
+    el.addEventListener('pointermove', e => { if (el._d) from(e); });
+    el.addEventListener('pointerup', () => { el._d = false; });
+    el.addEventListener('keydown', e => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown'){ e.preventDefault(); const c = i === 0 ? S.eqPre : S.eqBands[i - 1]; setEq(i, Math.min(20, Math.max(-20, c + (e.key === 'ArrowUp' ? .5 : -.5)))); } });
+  });
+}
+$('#setNav').addEventListener('click', e => { const b = e.target.closest('[data-sp]'); if (!b) return; setPage = b.dataset.sp; setQ = ''; $('#setSearch').value = ''; renderSettings(); $('#setPage').scrollTop = 0; });
+$('#setSearch').addEventListener('input', e => { setQ = e.target.value.trim(); renderSettings(); });
+$('#setClose').addEventListener('click', () => $('#setDlg').close());
+$('#setPage').addEventListener('click', e => {
+  const b = e.target.closest('[data-sk],[data-sact]'); if (!b || b.disabled) return;
+  if (b.dataset.sact){ sact(b.dataset.sact); return; }
+  const t = b.dataset.t, k = b.dataset.sk;
+  if (t === 'toggle') setKey(k, !S[k]); else if (t === 'seg' || t === 'swatch') setKey(k, b.dataset.v); else return;
+  renderSettings(true);
+});
+$('#setPage').addEventListener('change', e => {
+  const s = e.target.closest('select[data-sk]'); if (!s) return;
+  setKey(s.dataset.sk, s.dataset.num ? Number(s.value) : s.value); renderSettings(true);
+});
+$('#setPage').addEventListener('input', e => {
+  const r = e.target.closest('input[type="range"][data-sk]'); if (!r) return;
+  setKey(r.dataset.sk, Number(r.value)); const o = r.nextElementSibling; if (o) o.textContent = r.value + (r.dataset.unit || '');
+});
+
+/* ================= resilience ================= */
+async function setWake(on){
+  try {
+    if (!('wakeLock' in navigator)) return;
+    if (on && !wakeLock){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
+    else if (!on && wakeLock){ await wakeLock.release(); wakeLock = null; }
+  } catch (e) {}
+}
+v.addEventListener('play', () => setWake(true)); v.addEventListener('pause', () => setWake(false)); v.addEventListener('ended', () => setWake(false));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !v.paused && cur()) setWake(true); });
+window.addEventListener('error', e => { console.error(e.error || e.message); toast('Something went wrong. Please try again.'); });
+window.addEventListener('unhandledrejection', e => { const r = e.reason; if (r && (r.name === 'AbortError' || r.name === 'NotAllowedError')) return; console.error(r); });
+
+/* ================= init ================= */
+$$('[data-ic]').forEach(el => el.insertAdjacentHTML('afterbegin', icon(el.dataset.ic)));
+applyTheme(); applyScale(); applyFilter(); v.volume = S.vol; v.defaultPlaybackRate = S.speed; v.playbackRate = S.speed;
+window.matchMedia('(min-width: 861px)').matches && (panelOpen = false);
+render();
+})();
+</script>
+</body>
+</html>
